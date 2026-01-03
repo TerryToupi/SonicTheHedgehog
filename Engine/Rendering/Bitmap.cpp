@@ -11,6 +11,8 @@ namespace gfx
 	extern SDL_Window*		g_pWindow;
 	extern SDL_Renderer*	g_pRenderer;
 
+	static Color			g_Colorkey;
+
 	struct BitmapData
 	{
 		// CPU
@@ -66,7 +68,7 @@ namespace gfx
 			);
 
 		SDL_UnlockTexture(data->texture);
-		data->gpuPixels= nullptr;
+		data->gpuPixels = nullptr;
 
 		return (Bitmap)data;
 	}
@@ -178,40 +180,93 @@ namespace gfx
 		return data->height;
 	}
 
-	void BitmapBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
+	bool BitmapLock(Bitmap bmp)
 	{
+		ASSERT(bmp, "Failed, bitmap was nullptr");
+		auto data = (BitmapData*)(bmp);
 
+		ASSERT((data->gpuPixels == nullptr), "A Texture can not be locked twice!");
+		bool result = SDL_LockTexture(data->texture, nullptr, &data->gpuPixels, &data->pitch); 
+		ASSERT(result, SDL_GetError());
+		return result;
 	}
 
-	bool BitmapLock(Bitmap bitmap)
+	void BitmapUnlock(Bitmap bmp)
 	{
+		ASSERT(bmp, "Failed, bitmap was nullptr");
+		auto data = (BitmapData*)(bmp);
 
+		ASSERT((data->gpuPixels != nullptr), "A Texture myst be locked first!");
+		SDL_UnlockTexture(data->texture);
+		ASSERT((data->gpuPixels == nullptr), "Failed to unlock the texture!");
+		data->gpuPixels = nullptr;
 	}
 
-	void BitmapUnlock(Bitmap bitmap)
+	PixelMemory BitmapGetMemory(Bitmap bmp)
 	{
-
+		ASSERT(bmp, "Failed, bitmap was nullptr");
+		auto data = (BitmapData*)(bmp);
+		
+		ASSERT(data->pixels, "Pixel memory was nullptr!");
+		return data->pixels;
 	}
 
-	PixelMemory BitmapGetMemory(Bitmap bitmap)
+	int BitmapGetLineOffset(Bitmap bmp)
 	{
-
-	}
-
-	int BitmapGetLineOffset(Bitmap bitmap)
-	{
-
+		ASSERT(bmp, "Failed, bitmap was nullptr");
+		auto data = (BitmapData*)(bmp);
+		
+		return data->channels;
 	}
 
 	void WritePixelColor(PixelMemory pixelmem, const RGBA& value)
 	{
-
+		ASSERT(pixelmem, "Failed, pixel memory is nullptr");
+		Color c = MakeColor(value.r, value.g, value.b, value.a);
+		std::memcpy(pixelmem, &c, sizeof(Color));
 	}
 
 	void ReadPixelColor(PixelMemory pixelmem, RGBA* value)
 	{
+		ASSERT(pixelmem, "Failed, pexel memroy is nullptr");
+		RGBValue r = GetRedRGBA((uint8_t*)pixelmem);
+		RGBValue g = GetGreenRGBA((uint8_t*)pixelmem);
+		RGBValue b = GetBlueRGBA((uint8_t*)pixelmem);
+		RGBValue a = GetAlphaRGBA((uint8_t*)pixelmem);
 
+		(*value).r = r;
+		(*value).g = g;
+		(*value).b = b;
+		(*value).a = a;
+	}
+
+	void PutPixel(Bitmap bmp, Dim x, Dim y, Color c)
+	{ 
+		if (!BitmapLock(bmp))
+			return;
+
+		RGBA rgba;
+		rgba.r = GetRedRGBA((PixelMemory)(&c));
+		rgba.g = GetGreenRGBA((PixelMemory)(&c));
+		rgba.b = GetBlueRGBA((PixelMemory)(&c));
+		rgba.a = GetAlphaRGBA((PixelMemory)(&c));
+
+		WritePixelColor(
+			BitmapGetMemory(bmp) + (y * (BitmapGetWidth(bmp) * BitmapGetLineOffset(bmp)) + x),
+			rgba
+		);
+
+		BitmapUnlock(bmp);
+	}
+
+	void SetColorKey(Color c)
+	{
+		g_Colorkey = c;
+	}
+
+	Color GetColorKey(void)
+	{
+		return g_Colorkey;
 	}
 }
-
 

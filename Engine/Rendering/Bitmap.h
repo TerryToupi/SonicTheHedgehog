@@ -18,16 +18,25 @@ namespace gfx
 	Bitmap	BitmapGetScreen(void);
 	Dim		BitmapGetWidth(Bitmap bmp);
 	Dim		BitmapGetHeight(Bitmap bmp);
-	void	BitmapBlit(
+
+	bool		BitmapLock(Bitmap bmp);
+	void		BitmapUnlock(Bitmap bmp);
+	PixelMemory	BitmapGetMemory(Bitmap bmp);
+	int			BitmapGetLineOffset(Bitmap bmp);
+
+	void	WritePixelColor(PixelMemory pixelmem, const RGBA& value);
+	void	ReadPixelColor(PixelMemory pixelmem, RGBA* value);
+	void	PutPixel(Bitmap bmp, Dim x, Dim y, Color c);
+
+	void	SetColorKey(Color c);
+	Color	GetColorKey(void);
+
+	void BitmapBlit(
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to
 	);
-
-	bool		BitmapLock(Bitmap bitmap);
-	void		BitmapUnlock(Bitmap bitmap);
-	PixelMemory	BitmapGetMemory(Bitmap bitmap);
-	int			BitmapGetLineOffset(Bitmap bitmap);
-
-	void		WritePixelColor(PixelMemory pixelmem, const RGBA& value);
-	void		ReadPixelColor(PixelMemory pixelmem, RGBA* value);
+	void MaskedBlit(
+		Bitmap src, const Rect& from,
+		Bitmap dest, const Point& to
+	);
 }
