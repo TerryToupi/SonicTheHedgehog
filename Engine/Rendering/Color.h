@@ -32,9 +32,4 @@ namespace gfx
 	unsigned GetBlueBitMaskRGBA(void);
 	unsigned GetAlphaShiftRGBA(void);
 	unsigned GetAlphaBitMaskRGBA(void);
-
-	RGBValue GetRedRGBA(uint8_t * pixel);
-	RGBValue GetGreenRGBA(uint8_t* pixel);
-	RGBValue GetBlueRGBA(uint8_t* pixel);
-	RGBValue GetAlphaRGBA(uint8_t* pixel);
 }

@@ -13,5 +13,5 @@
 									} \
 								} while(false)
 #else
-	#define ASSERT(check, msg)
+	#define ASSERT(check, msg) (check)
 #endif

@@ -17,7 +17,6 @@ namespace gfx
 	Bitmap	BitmapCopy(Bitmap bmp);
 	void	BitmapClear(Bitmap bmp, Color c);
 	void	BitmapDestroy(Bitmap bmp);
-	Bitmap	BitmapGetScreen(void);
 	Dim		BitmapGetWidth(Bitmap bmp);
 	Dim		BitmapGetHeight(Bitmap bmp);
 
@@ -37,7 +36,16 @@ namespace gfx
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to
 	);
-	void MaskedBlit(
+	void ScaledBlit(
+		Bitmap src, const Rect& from,
+		Bitmap dest, const Point& to
+	);
+
+	void MaskedBitmapBlit(
+		Bitmap src, const Rect& from,
+		Bitmap dest, const Point& to
+	);
+	void MaskedScaledBlit(
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to
 	);
@@ -48,7 +56,7 @@ namespace gfx
 		BitmapLoader(void) = default;
 		~BitmapLoader() { CleanUp(); }
 
-		Bitmap	Load(std::string path);
+		Bitmap	Load(const std::string& path);
 		void	CleanUp(void);
 
 	private:

@@ -7,313 +7,274 @@
 #include <cstdlib>
 #include <cstring>
 
+namespace gfx 
+{
+	extern SDL_Window*					  g_pWindow;
+	extern SDL_Renderer*				  g_pRenderer;
+	extern const SDL_PixelFormatDetails*  g_pSuportedPixelFormat;
+	extern Color						  g_ClearColor;
+	extern Color						  g_ColorKey;
+}
+
 namespace gfx
 {
-	extern SDL_Window*		g_pWindow;
-	extern SDL_Renderer*	g_pRenderer;
-
-	static Color			g_Colorkey;
-
-	struct BitmapData
-	{
-		// CPU
-		Dim			width = 0;
-		Dim			height = 0;
-		Dim			channels = 4;
-		PixelMemory pixels = nullptr;
-
-		// GPU
-		SDL_Texture*	texture = nullptr;
-		void*			gpuPixels = nullptr;
-		int				pitch = 0;
-	};
-
 	Bitmap BitmapLoad(const char* path)
 	{
-		auto data = (BitmapData*)std::malloc(sizeof(BitmapData));
-		ASSERT(data, "Failed to allocate memory for bitmap");
+		constexpr int STBI_BPP = 4;
 
-		int w = 0, h = 0, channels = 0;
-		PixelMemory pixels = stbi_load(
-			path,
-			&w,
-			&h,
-			&channels,
-			STBI_rgb_alpha
+		int w = 0, h = 0, ch = 0;
+		stbi_uc* data = stbi_load(path, &w, &h, &ch, STBI_rgb_alpha);
+		ASSERT(data, "STB_image failed to load texture!");
+
+		SDL_Surface* surf = SDL_CreateSurface(
+			w,
+			h,
+			g_pSuportedPixelFormat->format
 		);
-		ASSERT((channels == sizeof(Color)), "Failed. Not supported format in use!");
+		ASSERT(surf, SDL_GetError());
+		ASSERT(SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_BLEND), SDL_GetError());
 
-		size_t textureByteSize = w * h * channels;
+		SDL_LockSurface(surf);
+		{
+			auto dst = (uint8_t*)surf->pixels;
+			int dstPitch = surf->pitch;
 
-		data->width = w;
-		data->height = h;
-		data->channels = channels;
-		data->pixels = pixels;
+			const uint8_t* src = data;
+			int srcPitch = w * STBI_BPP;
 
-		data->texture = SDL_CreateTexture( 
-			g_pRenderer,
-			SDL_PIXELFORMAT_RGBA8888,
-			SDL_TEXTUREACCESS_STREAMING,
-			data->width, data->height
-		);
-		ASSERT(data->texture, SDL_GetError());
+			for (int y = 0; y < h; y++)
+			{
+				auto dstRow = (Color*)(dst + y * dstPitch);
+				const uint8_t* srcRow = src + y * srcPitch;
 
-		ASSERT((data->gpuPixels == nullptr), "A Texture can not be locked twice!");
-		if (!SDL_LockTexture(data->texture, nullptr, &data->gpuPixels, &data->pitch))
-			ASSERT(false, SDL_GetError());
+				for (int x = 0; x < w; x++)
+				{
+					const uint8_t* p = srcRow + x * STBI_BPP;
+					dstRow[x] = MakeColor(p[0], p[1], p[2], p[3]);
+				}
+			}
+		}
+		SDL_UnlockSurface(surf);
 
-		for (int y = 0; y < h; ++y)
-			std::memcpy(
-				(PixelMemory)data->gpuPixels + y * data->pitch,
-				(PixelMemory)data->pixels + y * data->width * data->channels,
-				data->width * data->channels
-			);
-
-		SDL_UnlockTexture(data->texture);
-		data->gpuPixels = nullptr;
-
-		return (Bitmap)data;
+		stbi_image_free(data);
+		return (Bitmap)surf;
 	}
 
 	Bitmap BitmapCreate(Dim w, Dim h)
 	{
-		auto data = (BitmapData*)std::malloc(sizeof(BitmapData));
-		ASSERT(data, "Failed to allocate memory for bitmap");
-
-		size_t textureByteSize = w * h * sizeof(Color);
-
-		data->width = w;
-		data->height = h;
-		data->channels = sizeof(Color);
-
-		data->pixels = (PixelMemory)std::malloc(textureByteSize);
-		ASSERT(data->pixels, "Failed to allocate memory for bitmap pixels");
-		
-		std::memset(data->pixels, 0, textureByteSize);
-
-		data->texture = SDL_CreateTexture( 
-			g_pRenderer,
-			SDL_PIXELFORMAT_RGBA8888,
-			SDL_TEXTUREACCESS_STREAMING,
-			data->width, data->height
+		SDL_Surface* surf = SDL_CreateSurface(
+			(int)w,
+			(int)h,
+			g_pSuportedPixelFormat->format	
 		);
-		ASSERT(data->texture, SDL_GetError());
+		ASSERT(surf, SDL_GetError());
+		ASSERT(SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_BLEND), SDL_GetError());
 
-		ASSERT((data->gpuPixels == nullptr), "A Texture can not be locked twice!");
-		if (!SDL_LockTexture(data->texture, nullptr, &data->gpuPixels, &data->pitch))
-			ASSERT(false, SDL_GetError());
+		SDL_FillSurfaceRect(surf, nullptr, g_ClearColor);
 
-		for (int y = 0; y < h; ++y)
-			std::memcpy(
-				(PixelMemory)data->gpuPixels + y * data->pitch,
-				(PixelMemory)data->pixels + y * data->width * data->channels,
-				data->width * data->channels
-			);
-
-		SDL_UnlockTexture(data->texture);
-		data->gpuPixels = nullptr;
-
-		return (Bitmap)data;
+		return (Bitmap)surf;
 	}
 
 	Bitmap BitmapCopy(Bitmap bmp)
 	{
-		ASSERT(bmp, "Given bitmap to cpy was NULL!");
-		auto data = (BitmapData*)(bmp);
-		
-		size_t textureByteSize = data->width * data->height * data->channels;
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+		auto cpy  = SDL_ConvertSurface(surf, surf->format);
 
-		auto cpy = (BitmapData*)std::malloc(sizeof(BitmapData));
-		ASSERT(cpy, "Failed to malloc for cpy BitmapData");
-
-		cpy->width = data->width;
-		cpy->height = data->height;
-		cpy->channels = data->channels;
-
-		cpy->pixels = (PixelMemory)std::malloc(textureByteSize);
-		ASSERT(cpy->pixels, "Failed to malloc for cpy BitmapData pixels");
-
-		std::memcpy(
-			(PixelMemory)cpy->pixels,
-			(PixelMemory)data->pixels,
-			textureByteSize
-		);
-
-		cpy->texture = SDL_CreateTexture( 
-			g_pRenderer,
-			SDL_PIXELFORMAT_RGBA8888,
-			SDL_TEXTUREACCESS_STREAMING,
-			cpy->width, cpy->height
-		);
-		ASSERT(cpy->texture, SDL_GetError());
-
-		ASSERT((cpy->gpuPixels == nullptr), "A Texture can not be locked twice!");
-		if (!SDL_LockTexture(cpy->texture, nullptr, &cpy->gpuPixels, &cpy->pitch))
-			ASSERT(false, SDL_GetError());
-
-		for (int y = 0; y < cpy->height; ++y)
-			std::memcpy(
-				(PixelMemory)cpy->gpuPixels + y * cpy->pitch,
-				(PixelMemory)cpy->pixels + y * cpy->width * cpy->channels,
-				cpy->width * cpy->channels
-			);
-
-		SDL_UnlockTexture(cpy->texture);
-		cpy->gpuPixels = nullptr;
+		ASSERT(SDL_SetSurfaceBlendMode(cpy, SDL_BLENDMODE_BLEND), SDL_GetError());
 
 		return (Bitmap)cpy;
 	}
 
 	void BitmapClear(Bitmap bmp, Color c)
 	{
-		ASSERT(bmp, "Failed Bitmap was NULL");
-		auto data = (BitmapData*)(bmp);
-
-		size_t textureByteSize = data->width * data->height * data->channels;
-		
-		std::memset(
-			(PixelMemory)data->pixels,
-			(int)c,
-			textureByteSize
-		);
-
-		ASSERT((data->gpuPixels == nullptr), "A Texture can not be locked twice!");
-		if (!SDL_LockTexture(data->texture, nullptr, &data->gpuPixels, &data->pitch))
-			ASSERT(false, SDL_GetError());
-
-		for (int y = 0; y < data->height; ++y)
-			std::memcpy(
-				(PixelMemory)data->gpuPixels + y * data->pitch,
-				(PixelMemory)data->pixels + y * data->width * data->channels,
-				data->width * data->channels
-			);
-
-		SDL_UnlockTexture(data->texture);
-		data->gpuPixels= nullptr;
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+		SDL_FillSurfaceRect(surf, nullptr, c);
 	}
 
 	void BitmapDestroy(Bitmap bmp)
 	{
-		ASSERT(bmp, "Failed bitmap was NULL!");
-		auto data = (BitmapData*)(bmp);
-
-		ASSERT((data->gpuPixels == nullptr), "Can't free a locked texture!");
-
-		free(data->pixels);
-		SDL_DestroyTexture(data->texture);
-		free(data);
-	}
-
-	Bitmap BitmapGetScreen(void)
-	{
-		return nullptr;
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+		SDL_DestroySurface(surf);
 	}
 
 	Dim BitmapGetWidth(Bitmap bmp)
 	{
-		ASSERT(bmp, "Failed bitmap was NULL!");
-		auto data = (BitmapData*)(bmp);
-		return data->width;
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+		return surf->w;
 	}
 
 	Dim BitmapGetHeight(Bitmap bmp)
 	{
-		ASSERT(bmp, "Failed bitmap was NULL!");
-		auto data = (BitmapData*)(bmp);
-		return data->height;
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+		return surf->h;
 	}
 
 	bool BitmapLock(Bitmap bmp)
 	{
-		ASSERT(bmp, "Failed, bitmap was nullptr");
-		auto data = (BitmapData*)(bmp);
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+	
+		if (SDL_MUSTLOCK(surf))
+			if (!SDL_LockSurface(surf))
+			{
+				ASSERT(false, SDL_GetError());
+				return false;
+			}
 
-		ASSERT((data->gpuPixels == nullptr), "A Texture can not be locked twice!");
-		bool result = SDL_LockTexture(data->texture, nullptr, &data->gpuPixels, &data->pitch); 
-		ASSERT(result, SDL_GetError());
-		return result;
+		return true;
 	}
 
 	void BitmapUnlock(Bitmap bmp)
 	{
-		ASSERT(bmp, "Failed, bitmap was nullptr");
-		auto data = (BitmapData*)(bmp);
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
 
-		ASSERT((data->gpuPixels != nullptr), "A Texture myst be locked first!");
-		SDL_UnlockTexture(data->texture);
-		ASSERT((data->gpuPixels == nullptr), "Failed to unlock the texture!");
-		data->gpuPixels = nullptr;
+		if (SDL_MUSTLOCK(surf))
+			SDL_UnlockSurface(surf);
 	}
 
 	PixelMemory BitmapGetMemory(Bitmap bmp)
 	{
-		ASSERT(bmp, "Failed, bitmap was nullptr");
-		auto data = (BitmapData*)(bmp);
-		
-		ASSERT(data->pixels, "Pixel memory was nullptr!");
-		return data->pixels;
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+
+		return (PixelMemory)surf->pixels;
 	}
 
 	int BitmapGetLineOffset(Bitmap bmp)
 	{
-		ASSERT(bmp, "Failed, bitmap was nullptr");
-		auto data = (BitmapData*)(bmp);
-		
-		return data->channels;
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+		auto surf = (SDL_Surface*)(bmp);
+
+		return surf->pitch;
 	}
 
 	void WritePixelColor(PixelMemory pixelmem, const RGBA& value)
 	{
-		ASSERT(pixelmem, "Failed, pixel memory is nullptr");
+		ASSERT(pixelmem, "Failed. Pixel memory was nullptr!");
+
 		Color c = MakeColor(value.r, value.g, value.b, value.a);
 		std::memcpy(pixelmem, &c, sizeof(Color));
 	}
 
 	void ReadPixelColor(PixelMemory pixelmem, RGBA* value)
 	{
-		ASSERT(pixelmem, "Failed, pixel memroy is nullptr");
-		RGBValue r = GetRedRGBA((uint8_t*)pixelmem);
-		RGBValue g = GetGreenRGBA((uint8_t*)pixelmem);
-		RGBValue b = GetBlueRGBA((uint8_t*)pixelmem);
-		RGBValue a = GetAlphaRGBA((uint8_t*)pixelmem);
+		ASSERT(pixelmem, "Failed. Pixel memory was nullptr!");
+		ASSERT(value, "Failed. Value memory was nullptr!");
 
-		ASSERT(value, "Failed, value memory was nullptr!");
-		(*value).r = r;
-		(*value).g = g;
-		(*value).b = b;
-		(*value).a = a;
+		Color c = *(const Color*)pixelmem;
+		value->r = (RGBValue)((c & GetRedBitMaskRGBA()) >> GetRedShiftRGBA());
+		value->g = (RGBValue)((c & GetGreenBitMaskRGBA()) >> GetGreenShiftRGBA());
+		value->b = (RGBValue)((c & GetBlueBitMaskRGBA()) >> GetBlueShiftRGBA());
+		value->a = (RGBValue)((c & GetAlphaBitMaskRGBA()) >> GetAlphaShiftRGBA());
 	}
 
 	void PutPixel(Bitmap bmp, Dim x, Dim y, Color c)
 	{ 
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+
 		if (!BitmapLock(bmp))
 			return;
 
-		RGBA rgba;
-		rgba.r = GetRedRGBA((PixelMemory)(&c));
-		rgba.g = GetGreenRGBA((PixelMemory)(&c));
-		rgba.b = GetBlueRGBA((PixelMemory)(&c));
-		rgba.a = GetAlphaRGBA((PixelMemory)(&c));
+		uint8_t* base = BitmapGetMemory(bmp);
+		int pitch = BitmapGetLineOffset(bmp);
 
-		WritePixelColor(
-			BitmapGetMemory(bmp) + (y * (BitmapGetWidth(bmp) * BitmapGetLineOffset(bmp)) + x),
-			rgba
-		);
+		*(Color*)(base + y * pitch + x * sizeof(Color)) = c;
 
 		BitmapUnlock(bmp);
 	}
 
 	void SetColorKey(Color c)
 	{
-		g_Colorkey = c;
+		g_ColorKey = c;
 	}
 
 	Color GetColorKey(void)
 	{
-		return g_Colorkey;
+		return g_ColorKey;
 	}
 
-	Bitmap BitmapLoader::Load(std::string path) 
+	void BitmapBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
+	{
+		ASSERT(src, "Failed. Src bitmap was nullptr!");
+		auto srcSurf = (SDL_Surface*)(src);
+
+		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
+		auto destSurf = (SDL_Surface*)(dest);
+
+		SDL_Rect srcRect{ from.x, from.y, from.w, from.h };
+		SDL_Rect dstRect{ to.x,   to.y,   from.w, from.h };
+
+		ASSERT(SDL_BlitSurface(
+			srcSurf,
+			&srcRect,
+			destSurf,
+			&dstRect
+		), SDL_GetError());
+	}
+
+	void ScaledBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
+	{
+		ASSERT(src, "Failed. Src bitmap was nullptr!");
+		auto srcSurf = (SDL_Surface*)(src);
+
+		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
+		auto destSurf = (SDL_Surface*)(dest);
+
+		SDL_Rect srcRect{ from.x, from.y, from.w, from.h };
+		SDL_Rect dstRect{ to.x,   to.y,   from.w, from.h };
+
+		ASSERT(SDL_BlitSurfaceScaled(
+			srcSurf,
+			&srcRect,
+			destSurf,
+			&dstRect,
+			SDL_SCALEMODE_LINEAR
+		), SDL_GetError());
+	}
+
+	void MaskedBitmapBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
+	{
+		ASSERT(src, "Failed. Src bitmap was nullptr!");
+		auto srcSurf = (SDL_Surface*)(src);
+
+		ASSERT(SDL_SetSurfaceColorKey(srcSurf, true, g_ColorKey), SDL_GetError());
+
+		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
+		auto destSurf = (SDL_Surface*)(dest);
+
+		ASSERT(SDL_SetSurfaceColorKey(destSurf, true, g_ColorKey), SDL_GetError());
+
+		BitmapBlit(src, from, dest, to);
+
+		ASSERT(SDL_SetSurfaceColorKey(srcSurf, false, g_ColorKey), SDL_GetError());
+		ASSERT(SDL_SetSurfaceColorKey(destSurf, false, g_ColorKey), SDL_GetError());
+	}
+
+	void MaskedScaledBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
+	{
+		ASSERT(src, "Failed. Src bitmap was nullptr!");
+		auto srcSurf = (SDL_Surface*)(src);
+
+		ASSERT(SDL_SetSurfaceColorKey(srcSurf, true, g_ColorKey), SDL_GetError());
+
+		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
+		auto destSurf = (SDL_Surface*)(dest);
+
+		ASSERT(SDL_SetSurfaceColorKey(destSurf, true, g_ColorKey), SDL_GetError());
+
+		ScaledBlit(src, from, dest, to);
+
+		ASSERT(SDL_SetSurfaceColorKey(srcSurf, false, g_ColorKey), SDL_GetError());
+		ASSERT(SDL_SetSurfaceColorKey(destSurf, false, g_ColorKey), SDL_GetError());
+	}
+
+	Bitmap BitmapLoader::Load(const std::string& path)
 	{
 		auto b = GetBitmap(path);
 		if (!b)

@@ -1,94 +1,94 @@
 #include "Rendering/Color.h"
+#include "Utils/Assert.h"
 
-#define RGBA_R_SHIFT 24
-#define RGBA_G_SHIFT 16
-#define RGBA_B_SHIFT 8
-#define RGBA_A_SHIFT 0
+#include <SDL3/SDL.h>
 
-#define RGBA_R_MASK (0xFFu << RGBA_R_SHIFT)
-#define RGBA_G_MASK (0xFFu << RGBA_G_SHIFT)
-#define RGBA_B_MASK (0xFFu << RGBA_B_SHIFT)
-#define RGBA_A_MASK (0xFFu << RGBA_A_SHIFT)
-
-#define RGBA8888(r, g, b, a) \
-    ( ((uint32_t)(r) << RGBA_R_SHIFT) | \
-      ((uint32_t)(g) << RGBA_G_SHIFT) | \
-      ((uint32_t)(b) << RGBA_B_SHIFT) | \
-      ((uint32_t)(a) << RGBA_A_SHIFT) )
-
-#define RGBA_GET_R(c) (((c) & RGBA_R_MASK) >> RGBA_R_SHIFT)
-#define RGBA_GET_G(c) (((c) & RGBA_G_MASK) >> RGBA_G_SHIFT)
-#define RGBA_GET_B(c) (((c) & RGBA_B_MASK) >> RGBA_B_SHIFT)
-#define RGBA_GET_A(c) (((c) & RGBA_A_MASK) >> RGBA_A_SHIFT)
+namespace gfx 
+{
+	extern SDL_Window*					  g_pWindow;
+	extern SDL_Renderer*				  g_pRenderer;
+	extern const SDL_PixelFormatDetails*  g_pSuportedPixelFormat;
+	extern Color						  g_ClearColor;
+}
 
 namespace gfx
 {
-	Color MakeColor(RGBValue r, RGBValue g, RGBValue b, RGBValue a /*= 0*/)
+	Color MakeColor(RGBValue r, RGBValue g, RGBValue b, RGBValue a /*= 255 */)
 	{
-        return (Color)(RGBA8888(r, g, b, a));
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		Color c = 0;
+
+		c |= ((Color)r << fmt->Rshift) & fmt->Rmask;
+		c |= ((Color)g << fmt->Gshift) & fmt->Gmask;
+		c |= ((Color)b << fmt->Bshift) & fmt->Bmask;
+		c |= ((Color)a << fmt->Ashift) & fmt->Amask;
+
+		return c;
 	}
 
 	unsigned GetRedShiftRGBA(void)
 	{
-		return (unsigned)RGBA_R_SHIFT;
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		return (unsigned)fmt->Rshift;
 	}
 
 	unsigned GetRedBitMaskRGBA(void)
 	{
-		return (unsigned)RGBA_R_MASK;
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		return (unsigned)fmt->Rmask;
 	}
 
 	unsigned GetGreenShiftRGBA(void)
 	{
-		return (unsigned)RGBA_G_SHIFT;
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		return (unsigned)fmt->Gshift;
 	}
 
 	unsigned GetGreenBitMaskRGBA(void)
 	{
-		return (unsigned)RGBA_G_MASK;
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		return (unsigned)fmt->Gmask;
 	}
 
 	unsigned GetBlueShiftRGBA(void)
 	{
-		return (unsigned)RGBA_B_SHIFT;
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		return (unsigned)fmt->Bshift;
 	}
 
 	unsigned GetBlueBitMaskRGBA(void)
 	{
-		return (unsigned)RGBA_B_MASK;
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		return (unsigned)fmt->Bmask;
 	}
 
 	unsigned GetAlphaShiftRGBA(void)
 	{
-		return (unsigned)RGBA_A_SHIFT;
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
+
+		return (unsigned)fmt->Ashift;
 	}
 
 	unsigned GetAlphaBitMaskRGBA(void)
 	{
-		return (unsigned)RGBA_A_MASK;
-	}
+		const SDL_PixelFormatDetails* fmt = g_pSuportedPixelFormat;
+		ASSERT(fmt, "Faild, support format was not found!");
 
-	RGBValue GetRedRGBA(uint8_t* pixel)
-	{
-		Color c = *((Color*)pixel);
-		return (c & GetRedBitMaskRGBA()) >> GetRedShiftRGBA();
-	}
-
-	RGBValue GetGreenRGBA(uint8_t* pixel)
-	{
-		Color c = *((Color*)pixel);
-		return (c & GetGreenBitMaskRGBA()) >> GetGreenShiftRGBA();
-	}
-
-	RGBValue GetBlueRGBA(uint8_t* pixel)
-	{
-		Color c = *((Color*)pixel);
-		return (c & GetBlueBitMaskRGBA()) >> GetBlueShiftRGBA();
-	}
-
-	RGBValue GetAlphaRGBA(uint8_t* pixel)
-	{
-		Color c = *((Color*)pixel);
-		return (c & GetAlphaBitMaskRGBA()) >> GetAlphaShiftRGBA();
+		return (unsigned)fmt->Amask;
 	}
 }

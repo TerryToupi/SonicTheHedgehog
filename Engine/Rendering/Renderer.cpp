@@ -1,10 +1,25 @@
 #include "Rendering/Renderer.h"
+#include "Rendering/Color.h"
 #include "Utils/Assert.h"
 
 #include <SDL3/SDL.h>
 
-SDL_Window*		g_pWindow = nullptr;
-SDL_Renderer*	g_pRenderer = nullptr;
+namespace gfx
+{
+	SDL_Window*					  g_pWindow = nullptr;
+	SDL_Renderer*				  g_pRenderer = nullptr;
+	const SDL_PixelFormatDetails* g_pSuportedPixelFormat = nullptr;
+	Color						  g_ClearColor;
+	Color						  g_ColorKey;
+
+	struct ViewData
+	{
+		bool		 dpyChanged = false;
+		Dim			 dpyX = 0, dpyY = 0;
+		SDL_Texture* streaming = nullptr;
+		Bitmap		 buffer = nullptr;
+	} g_ViewData;
+}
 
 namespace gfx
 {
@@ -16,35 +31,123 @@ namespace gfx
 		SDL_WindowFlags flags = { 0 };
 		flags |= SDL_WINDOW_INPUT_FOCUS;
 		flags |= SDL_WINDOW_MOUSE_CAPTURE;
-		flags |= SDL_WINDOW_RESIZABLE;
+		//flags |= SDL_WINDOW_RESIZABLE;
 
 		if (!SDL_CreateWindowAndRenderer(title, (int)rw, (int)rh, flags, &g_pWindow, &g_pRenderer))
 			SDL_Log("[SDL] Failed to initialize Window: %s", SDL_GetError());
 
 		ASSERT((g_pWindow), "Failed to initilize SDL window!");
 		ASSERT((g_pRenderer), "Failed to initilize SDL renderer!");
+
+		g_pSuportedPixelFormat = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA8888);
+		ASSERT((g_pSuportedPixelFormat), SDL_GetError());
+
+		g_ColorKey	 = MakeColor(255, 0, 255, 255);
+		g_ClearColor = MakeColor(255, 255, 255, 255);
+
+		g_ViewData.dpyX = rw;
+		g_ViewData.dpyY = rh;
+
+		g_ViewData.streaming = SDL_CreateTexture(
+			g_pRenderer,
+			g_pSuportedPixelFormat->format,
+			SDL_TEXTUREACCESS_STREAMING,
+			g_ViewData.dpyX,
+			g_ViewData.dpyY
+		);
+		ASSERT(g_ViewData.streaming, SDL_GetError());
+
+		g_ViewData.buffer = BitmapCreate(g_ViewData.dpyX, g_ViewData.dpyY);
+		ASSERT(g_ViewData.buffer, SDL_GetError());
 	}
 
 	void Close(void)
 	{
 		ASSERT((g_pWindow), "SDL window has already been destroyed!");
 		ASSERT((g_pRenderer), "SDL renderer has already been destroyed!");
+		ASSERT((g_pSuportedPixelFormat), "SDL supported pixel format settings has already been destroyed!");
+		ASSERT((g_ViewData.buffer), "Display buffer has been destroyed!");
+		ASSERT((g_ViewData.streaming), "Display streaming texture has been destroyed!");
 
+		BitmapDestroy(g_ViewData.buffer);
+		SDL_DestroyTexture(g_ViewData.streaming);
 		SDL_DestroyRenderer(g_pRenderer);
 		SDL_DestroyWindow(g_pWindow);
 	}
 
 	Dim GetResWidth(void)
 	{
-		ASSERT((g_pWindow), "No window width because SDL window has been destroyed!");
-
-		return Dim();
+		ASSERT(!(g_ViewData.dpyChanged), "Window data has beed changed!");
+		return g_ViewData.dpyX;
 	}
 
 	Dim GetResHeight(void)
 	{
-		ASSERT((g_pWindow), "No window height because SDL window has been destroyed!");
+		ASSERT(!(g_ViewData.dpyChanged), "Window data has beed changed!");
+		return g_ViewData.dpyY;
+	}
 
-		return Dim();
+	Color GetBackgroundColor(void)
+	{
+		return g_ClearColor;
+	}
+
+	void SetBackgroundColor(Color c)
+	{
+		g_ClearColor = c;
+	}
+
+	Bitmap GetScreenBuffer(void)
+	{
+		ASSERT((g_ViewData.buffer), "Failed. Display buffer has been destroyed!");
+		return g_ViewData.buffer;
+	}
+
+	Rect GetScreenRect(void)
+	{
+		return { 0, 0, g_ViewData.dpyX, g_ViewData.dpyY };
+	}
+
+	void Flush()
+	{
+		ASSERT((g_ViewData.streaming), "Display streaming texture has been destroyed!");
+		auto streamingTexture = (SDL_Texture*)(g_ViewData.streaming);
+
+		ASSERT((g_ViewData.buffer), "Display buffer bitmap has been destroyed!");
+		auto bufferSurface = (SDL_Surface*)(g_ViewData.buffer);
+
+		SDL_Rect area = {
+			.x = 0, .y = 0,
+			.w = g_ViewData.dpyX, .h = g_ViewData.dpyX
+		};
+
+		void* pixels = NULL;
+		int pitch = 0;
+
+		BitmapLock(g_ViewData.buffer);
+		ASSERT(SDL_UpdateTexture(streamingTexture, nullptr, bufferSurface->pixels, bufferSurface->pitch), SDL_GetError());
+		BitmapUnlock(g_ViewData.buffer);
+
+		//ASSERT(SDL_LockTexture(streamingTexture, &area, &pixels, &pitch), SDL_GetError());
+		//{
+		//	auto dst = static_cast<uint8_t*>(pixels);
+		//	auto src = static_cast<uint8_t*>(bufferSurface->pixels);
+
+		//	const int rowBytes = bufferSurface->w * g_pSuportedPixelFormat->bytes_per_pixel;
+
+		//	for (int y = 0; y < bufferSurface->h; ++y)
+		//	{
+		//		std::memcpy(dst, src, rowBytes);
+		//		dst += pitch;
+		//		src += bufferSurface->pitch;
+		//	}
+		//}
+		//SDL_UnlockTexture(streamingTexture);
+
+		ASSERT(SDL_RenderClear(g_pRenderer), SDL_GetError());
+		{
+			ASSERT(SDL_RenderTexture(g_pRenderer, streamingTexture, nullptr, nullptr), SDL_GetError());
+		}
+		ASSERT(SDL_RenderPresent(g_pRenderer), SDL_GetError());
 	}
 }
