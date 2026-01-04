@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+#include <string>
 #include <cstdint>
 
 #include "Utils/Common.h"
@@ -39,4 +41,22 @@ namespace gfx
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to
 	);
+
+	class BitmapLoader
+	{
+	public:
+		BitmapLoader(void) = default;
+		~BitmapLoader() { CleanUp(); }
+
+		Bitmap	Load(std::string path);
+		void	CleanUp(void);
+
+	private:
+		Bitmap GetBitmap(const std::string& path) const;
+
+	private:
+		using Bitmaps = std::map<std::string, Bitmap>;
+
+		Bitmaps	m_Bitmaps;
+	};
 }

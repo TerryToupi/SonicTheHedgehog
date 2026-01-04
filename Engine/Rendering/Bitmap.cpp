@@ -2,6 +2,7 @@
 #include "Utils/Assert.h"
 
 #include <SDL3/SDL.h>
+#include <Rendering/stb_image.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -29,7 +30,49 @@ namespace gfx
 
 	Bitmap BitmapLoad(const char* path)
 	{
-		
+		auto data = (BitmapData*)std::malloc(sizeof(BitmapData));
+		ASSERT(data, "Failed to allocate memory for bitmap");
+
+		int w = 0, h = 0, channels = 0;
+		PixelMemory pixels = stbi_load(
+			path,
+			&w,
+			&h,
+			&channels,
+			STBI_rgb_alpha
+		);
+		ASSERT((channels == sizeof(Color)), "Failed. Not supported format in use!");
+
+		size_t textureByteSize = w * h * channels;
+
+		data->width = w;
+		data->height = h;
+		data->channels = channels;
+		data->pixels = pixels;
+
+		data->texture = SDL_CreateTexture( 
+			g_pRenderer,
+			SDL_PIXELFORMAT_RGBA8888,
+			SDL_TEXTUREACCESS_STREAMING,
+			data->width, data->height
+		);
+		ASSERT(data->texture, SDL_GetError());
+
+		ASSERT((data->gpuPixels == nullptr), "A Texture can not be locked twice!");
+		if (!SDL_LockTexture(data->texture, nullptr, &data->gpuPixels, &data->pitch))
+			ASSERT(false, SDL_GetError());
+
+		for (int y = 0; y < h; ++y)
+			std::memcpy(
+				(PixelMemory)data->gpuPixels + y * data->pitch,
+				(PixelMemory)data->pixels + y * data->width * data->channels,
+				data->width * data->channels
+			);
+
+		SDL_UnlockTexture(data->texture);
+		data->gpuPixels = nullptr;
+
+		return (Bitmap)data;
 	}
 
 	Bitmap BitmapCreate(Dim w, Dim h)
@@ -228,12 +271,13 @@ namespace gfx
 
 	void ReadPixelColor(PixelMemory pixelmem, RGBA* value)
 	{
-		ASSERT(pixelmem, "Failed, pexel memroy is nullptr");
+		ASSERT(pixelmem, "Failed, pixel memroy is nullptr");
 		RGBValue r = GetRedRGBA((uint8_t*)pixelmem);
 		RGBValue g = GetGreenRGBA((uint8_t*)pixelmem);
 		RGBValue b = GetBlueRGBA((uint8_t*)pixelmem);
 		RGBValue a = GetAlphaRGBA((uint8_t*)pixelmem);
 
+		ASSERT(value, "Failed, value memory was nullptr!");
 		(*value).r = r;
 		(*value).g = g;
 		(*value).b = b;
@@ -267,6 +311,31 @@ namespace gfx
 	Color GetColorKey(void)
 	{
 		return g_Colorkey;
+	}
+
+	Bitmap BitmapLoader::Load(std::string path) 
+	{
+		auto b = GetBitmap(path);
+		if (!b)
+		{
+			b = BitmapLoad(path.c_str());
+			ASSERT(b, "Failed. Bitmap was nullptr");
+			m_Bitmaps[path] = b;
+		}
+		return b;
+	}
+
+	void BitmapLoader::CleanUp(void)
+	{
+		for (auto& i : m_Bitmaps)
+			BitmapDestroy(i.second);
+		m_Bitmaps.clear();
+	}
+
+	Bitmap BitmapLoader::GetBitmap(const std::string& path) const
+	{
+		auto i = m_Bitmaps.find(path);
+		return i != m_Bitmaps.end() ? i->second : nullptr;
 	}
 }
 
