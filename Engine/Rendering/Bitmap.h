@@ -36,19 +36,6 @@ namespace gfx
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to
 	);
-	void ScaledBlit(
-		Bitmap src, const Rect& from,
-		Bitmap dest, const Point& to
-	);
-
-	void MaskedBitmapBlit(
-		Bitmap src, const Rect& from,
-		Bitmap dest, const Point& to
-	);
-	void MaskedScaledBlit(
-		Bitmap src, const Rect& from,
-		Bitmap dest, const Point& to
-	);
 
 	class BitmapLoader
 	{

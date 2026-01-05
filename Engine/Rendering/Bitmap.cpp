@@ -14,16 +14,27 @@ namespace gfx
 	extern const SDL_PixelFormatDetails*  g_pSuportedPixelFormat;
 	extern Color						  g_ClearColor;
 	extern Color						  g_ColorKey;
+
+	struct BitmapData
+	{
+		SDL_Surface* surf = nullptr;
+		SDL_Texture* texture = nullptr;
+	};
 }
 
 namespace gfx
 {
+	static inline BitmapData* AllocateBitmapData()
+	{
+		return (BitmapData*)malloc(sizeof(BitmapData));
+	}
+
 	Bitmap BitmapLoad(const char* path)
 	{
 		constexpr int STBI_BPP = 4;
 
 		int w = 0, h = 0, ch = 0;
-		stbi_uc* data = stbi_load(path, &w, &h, &ch, STBI_rgb_alpha);
+		uint8_t* data = stbi_load(path, &w, &h, &ch, STBI_rgb_alpha);
 		ASSERT(data, "STB_image failed to load texture!");
 
 		SDL_Surface* surf = SDL_CreateSurface(
@@ -32,14 +43,18 @@ namespace gfx
 			g_pSuportedPixelFormat->format
 		);
 		ASSERT(surf, SDL_GetError());
-		ASSERT(SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_BLEND), SDL_GetError());
 
-		SDL_LockSurface(surf);
+		ASSERT(SDL_SetSurfaceBlendMode(
+			surf, 
+			SDL_BLENDMODE_BLEND
+		), SDL_GetError());
+
+		ASSERT(SDL_LockSurface(surf), SDL_GetError());
 		{
 			auto dst = (uint8_t*)surf->pixels;
 			int dstPitch = surf->pitch;
 
-			const uint8_t* src = data;
+			const auto src = (uint8_t*)data;
 			int srcPitch = w * STBI_BPP;
 
 			for (int y = 0; y < h; y++)
@@ -55,9 +70,39 @@ namespace gfx
 			}
 		}
 		SDL_UnlockSurface(surf);
-
 		stbi_image_free(data);
-		return (Bitmap)surf;
+
+		SDL_Texture* texture = SDL_CreateTexture(
+			g_pRenderer, 
+			g_pSuportedPixelFormat->format,
+			SDL_TEXTUREACCESS_TARGET,
+			surf->w,
+			surf->h
+		);
+		ASSERT(texture, SDL_GetError());
+
+		ASSERT(SDL_UpdateTexture(
+			texture,
+			nullptr,
+			surf->pixels,
+			surf->pitch
+		), SDL_GetError());
+
+		ASSERT(SDL_SetTextureBlendMode(
+			texture,
+			SDL_BLENDMODE_BLEND
+		), SDL_GetError());
+
+		ASSERT(SDL_SetTextureScaleMode(
+			texture,
+			SDL_SCALEMODE_LINEAR
+		), SDL_GetError());
+
+		BitmapData* bitmap = AllocateBitmapData();
+		bitmap->surf = surf;
+		bitmap->texture = texture;
+
+		return (Bitmap)bitmap;
 	}
 
 	Bitmap BitmapCreate(Dim w, Dim h)
@@ -68,59 +113,157 @@ namespace gfx
 			g_pSuportedPixelFormat->format	
 		);
 		ASSERT(surf, SDL_GetError());
-		ASSERT(SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_BLEND), SDL_GetError());
 
-		SDL_FillSurfaceRect(surf, nullptr, g_ClearColor);
+		ASSERT(SDL_SetSurfaceBlendMode(
+			surf, 
+			SDL_BLENDMODE_BLEND
+		), SDL_GetError());
 
-		return (Bitmap)surf;
+		ASSERT(SDL_FillSurfaceRect(
+			surf, 
+			nullptr, 
+			g_ClearColor
+		), SDL_GetError());
+
+		SDL_Texture* texture = SDL_CreateTexture(
+			g_pRenderer,
+			g_pSuportedPixelFormat->format,
+			SDL_TEXTUREACCESS_TARGET,
+			surf->w,
+			surf->h
+		);
+		ASSERT(texture, SDL_GetError());
+
+		ASSERT(SDL_UpdateTexture(
+			texture,
+			nullptr,
+			surf->pixels,
+			surf->pitch
+		), SDL_GetError());
+
+		ASSERT(SDL_SetTextureBlendMode(
+			texture,
+			SDL_BLENDMODE_BLEND
+		), SDL_GetError());
+
+		ASSERT(SDL_SetTextureScaleMode(
+			texture,
+			SDL_SCALEMODE_LINEAR
+		), SDL_GetError());
+
+		BitmapData* bitmap = AllocateBitmapData();
+		bitmap->surf = surf;
+		bitmap->texture = texture;
+
+		return (Bitmap)bitmap;
 	}
 
 	Bitmap BitmapCopy(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
-		auto cpy  = SDL_ConvertSurface(surf, surf->format);
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
 
-		ASSERT(SDL_SetSurfaceBlendMode(cpy, SDL_BLENDMODE_BLEND), SDL_GetError());
+		auto cpySurf = SDL_ConvertSurface(bmpSurf, bmpSurf->format);
+		ASSERT(cpySurf, SDL_GetError());
 
-		return (Bitmap)cpy;
+		ASSERT(SDL_SetSurfaceBlendMode(
+			cpySurf, 
+			SDL_BLENDMODE_BLEND
+		), SDL_GetError());
+
+		SDL_Texture* cpyTexture = SDL_CreateTexture(
+			g_pRenderer,
+			g_pSuportedPixelFormat->format,
+			SDL_TEXTUREACCESS_TARGET,
+			cpySurf->w,
+			cpySurf->h
+		);
+		ASSERT(cpyTexture, SDL_GetError());
+
+		ASSERT(SDL_UpdateTexture(
+			cpyTexture,
+			nullptr,
+			cpySurf->pixels,
+			cpySurf->pitch
+		), SDL_GetError());
+
+		ASSERT(SDL_SetTextureBlendMode(
+			cpyTexture,
+			SDL_BLENDMODE_BLEND
+		), SDL_GetError());
+
+		ASSERT(SDL_SetTextureScaleMode(
+			cpyTexture,
+			SDL_SCALEMODE_LINEAR
+		), SDL_GetError());
+
+		BitmapData* bitmap = AllocateBitmapData();
+		bitmap->surf = cpySurf;
+		bitmap->texture = cpyTexture;
+
+		return (Bitmap)bitmap;
 	}
 
 	void BitmapClear(Bitmap bmp, Color c)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
-		SDL_FillSurfaceRect(surf, nullptr, c);
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
+		auto bmpTexture = bmpData->texture;
+
+		ASSERT(SDL_FillSurfaceRect(
+			bmpSurf,
+			nullptr,
+			(Uint32)c
+		), SDL_GetError());
+
+		ASSERT(SDL_UpdateTexture(
+			bmpTexture,
+			nullptr,
+			bmpSurf->pixels,
+			bmpSurf->pitch
+		), SDL_GetError());
 	}
 
 	void BitmapDestroy(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
-		SDL_DestroySurface(surf);
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
+		auto bmpTexture = bmpData->texture;
+
+		SDL_DestroySurface(bmpSurf);
+		SDL_DestroyTexture(bmpTexture);
+		free(bmp);
 	}
 
 	Dim BitmapGetWidth(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
-		return surf->w;
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
+
+		return (Dim)bmpSurf->w;
 	}
 
 	Dim BitmapGetHeight(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
-		return surf->h;
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
+
+		return (Dim)bmpSurf->h;
 	}
 
 	bool BitmapLock(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
 	
-		if (SDL_MUSTLOCK(surf))
-			if (!SDL_LockSurface(surf))
+		if (SDL_MUSTLOCK(bmpSurf))
+			if (!SDL_LockSurface(bmpSurf))
 			{
 				ASSERT(false, SDL_GetError());
 				return false;
@@ -132,26 +275,36 @@ namespace gfx
 	void BitmapUnlock(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
+		auto bmpTexture = bmpData->texture;
 
-		if (SDL_MUSTLOCK(surf))
-			SDL_UnlockSurface(surf);
+		SDL_UnlockSurface(bmpSurf);
+
+		ASSERT(SDL_UpdateTexture(
+			bmpTexture,
+			nullptr,
+			bmpSurf->pixels,
+			bmpSurf->pitch
+		), SDL_GetError());
 	}
 
 	PixelMemory BitmapGetMemory(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
 
-		return (PixelMemory)surf->pixels;
+		return (PixelMemory)bmpSurf->pixels;
 	}
 
 	int BitmapGetLineOffset(Bitmap bmp)
 	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
-		auto surf = (SDL_Surface*)(bmp);
+		auto bmpData = (BitmapData*)(bmp);
+		auto bmpSurf = bmpData->surf;
 
-		return surf->pitch;
+		return bmpSurf->pitch;
 	}
 
 	void WritePixelColor(PixelMemory pixelmem, const RGBA& value)
@@ -159,7 +312,7 @@ namespace gfx
 		ASSERT(pixelmem, "Failed. Pixel memory was nullptr!");
 
 		Color c = MakeColor(value.r, value.g, value.b, value.a);
-		std::memcpy(pixelmem, &c, sizeof(Color));
+		memcpy(pixelmem, &c, sizeof(Color));
 	}
 
 	void ReadPixelColor(PixelMemory pixelmem, RGBA* value)
@@ -201,77 +354,33 @@ namespace gfx
 
 	void BitmapBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
 	{
-		ASSERT(src, "Failed. Src bitmap was nullptr!");
-		auto srcSurf = (SDL_Surface*)(src);
+		ASSERT(src, "Failed. Bitmap was nullptr!");
+		auto srcData = (BitmapData*)(src);
+		auto srcTexture = srcData->texture;
 
 		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
-		auto destSurf = (SDL_Surface*)(dest);
+		auto destData = (BitmapData*)(dest);
+		auto destTexture = destData->texture;
 
-		SDL_Rect srcRect{ from.x, from.y, from.w, from.h };
-		SDL_Rect dstRect{ to.x,   to.y,   from.w, from.h };
+		SDL_FRect srcRect{ (float)from.x, (float)from.y, (float)from.w, (float)from.h };
+		SDL_FRect dstRect{ (float)to.x,   (float)to.y,   (float)from.w, (float)from.h };
 
-		ASSERT(SDL_BlitSurface(
-			srcSurf,
+		ASSERT(SDL_SetRenderTarget(
+			g_pRenderer,
+			destTexture
+		), SDL_GetError());
+
+		ASSERT(SDL_RenderTexture(
+			g_pRenderer,
+			srcTexture,
 			&srcRect,
-			destSurf,
 			&dstRect
 		), SDL_GetError());
-	}
 
-	void ScaledBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
-	{
-		ASSERT(src, "Failed. Src bitmap was nullptr!");
-		auto srcSurf = (SDL_Surface*)(src);
-
-		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
-		auto destSurf = (SDL_Surface*)(dest);
-
-		SDL_Rect srcRect{ from.x, from.y, from.w, from.h };
-		SDL_Rect dstRect{ to.x,   to.y,   from.w, from.h };
-
-		ASSERT(SDL_BlitSurfaceScaled(
-			srcSurf,
-			&srcRect,
-			destSurf,
-			&dstRect,
-			SDL_SCALEMODE_LINEAR
+		ASSERT(SDL_SetRenderTarget(
+			g_pRenderer,
+			nullptr	
 		), SDL_GetError());
-	}
-
-	void MaskedBitmapBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
-	{
-		ASSERT(src, "Failed. Src bitmap was nullptr!");
-		auto srcSurf = (SDL_Surface*)(src);
-
-		ASSERT(SDL_SetSurfaceColorKey(srcSurf, true, g_ColorKey), SDL_GetError());
-
-		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
-		auto destSurf = (SDL_Surface*)(dest);
-
-		ASSERT(SDL_SetSurfaceColorKey(destSurf, true, g_ColorKey), SDL_GetError());
-
-		BitmapBlit(src, from, dest, to);
-
-		ASSERT(SDL_SetSurfaceColorKey(srcSurf, false, g_ColorKey), SDL_GetError());
-		ASSERT(SDL_SetSurfaceColorKey(destSurf, false, g_ColorKey), SDL_GetError());
-	}
-
-	void MaskedScaledBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)
-	{
-		ASSERT(src, "Failed. Src bitmap was nullptr!");
-		auto srcSurf = (SDL_Surface*)(src);
-
-		ASSERT(SDL_SetSurfaceColorKey(srcSurf, true, g_ColorKey), SDL_GetError());
-
-		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
-		auto destSurf = (SDL_Surface*)(dest);
-
-		ASSERT(SDL_SetSurfaceColorKey(destSurf, true, g_ColorKey), SDL_GetError());
-
-		ScaledBlit(src, from, dest, to);
-
-		ASSERT(SDL_SetSurfaceColorKey(srcSurf, false, g_ColorKey), SDL_GetError());
-		ASSERT(SDL_SetSurfaceColorKey(destSurf, false, g_ColorKey), SDL_GetError());
 	}
 
 	Bitmap BitmapLoader::Load(const std::string& path)

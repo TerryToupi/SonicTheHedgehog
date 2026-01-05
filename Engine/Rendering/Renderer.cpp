@@ -14,11 +14,16 @@ namespace gfx
 
 	struct ViewData
 	{
-		bool		 dpyChanged = false;
-		Dim			 dpyX = 0, dpyY = 0;
-		SDL_Texture* streaming = nullptr;
-		Bitmap		 buffer = nullptr;
+		bool   dpyChanged = false;
+		Dim	   dpyX = 0, dpyY = 0;
+		Bitmap buffer = nullptr;
 	} g_ViewData;
+
+	struct BitmapData
+	{
+		SDL_Surface* surf = nullptr;
+		SDL_Texture* texture = nullptr;
+	};
 }
 
 namespace gfx
@@ -31,7 +36,7 @@ namespace gfx
 		SDL_WindowFlags flags = { 0 };
 		flags |= SDL_WINDOW_INPUT_FOCUS;
 		flags |= SDL_WINDOW_MOUSE_CAPTURE;
-		//flags |= SDL_WINDOW_RESIZABLE;
+		flags |= SDL_WINDOW_RESIZABLE;
 
 		if (!SDL_CreateWindowAndRenderer(title, (int)rw, (int)rh, flags, &g_pWindow, &g_pRenderer))
 			SDL_Log("[SDL] Failed to initialize Window: %s", SDL_GetError());
@@ -48,15 +53,6 @@ namespace gfx
 		g_ViewData.dpyX = rw;
 		g_ViewData.dpyY = rh;
 
-		g_ViewData.streaming = SDL_CreateTexture(
-			g_pRenderer,
-			g_pSuportedPixelFormat->format,
-			SDL_TEXTUREACCESS_STREAMING,
-			g_ViewData.dpyX,
-			g_ViewData.dpyY
-		);
-		ASSERT(g_ViewData.streaming, SDL_GetError());
-
 		g_ViewData.buffer = BitmapCreate(g_ViewData.dpyX, g_ViewData.dpyY);
 		ASSERT(g_ViewData.buffer, SDL_GetError());
 	}
@@ -67,10 +63,8 @@ namespace gfx
 		ASSERT((g_pRenderer), "SDL renderer has already been destroyed!");
 		ASSERT((g_pSuportedPixelFormat), "SDL supported pixel format settings has already been destroyed!");
 		ASSERT((g_ViewData.buffer), "Display buffer has been destroyed!");
-		ASSERT((g_ViewData.streaming), "Display streaming texture has been destroyed!");
 
 		BitmapDestroy(g_ViewData.buffer);
-		SDL_DestroyTexture(g_ViewData.streaming);
 		SDL_DestroyRenderer(g_pRenderer);
 		SDL_DestroyWindow(g_pWindow);
 	}
@@ -108,46 +102,58 @@ namespace gfx
 		return { 0, 0, g_ViewData.dpyX, g_ViewData.dpyY };
 	}
 
+	void RaiseWindowResizeEvent(void)
+	{
+		g_ViewData.dpyChanged = true;
+	}
+
+	static inline void ResizeWindow(void)
+	{
+		if (g_ViewData.dpyChanged)
+		{
+			ASSERT((g_ViewData.buffer), "Display buffer bitmap has been destroyed!");
+
+			ASSERT(SDL_GetWindowSize(
+				g_pWindow, 
+				(int*)(&g_ViewData.dpyX), 
+				(int*)(&g_ViewData.dpyY)
+			), SDL_GetError());
+
+			BitmapDestroy(g_ViewData.buffer);
+
+			g_ViewData.buffer = BitmapCreate(g_ViewData.dpyX, g_ViewData.dpyY);
+			ASSERT(g_ViewData.buffer, SDL_GetError());
+
+			g_ViewData.dpyChanged = false;
+		}
+	}
+
 	void Flush()
 	{
-		ASSERT((g_ViewData.streaming), "Display streaming texture has been destroyed!");
-		auto streamingTexture = (SDL_Texture*)(g_ViewData.streaming);
+		ResizeWindow();
 
 		ASSERT((g_ViewData.buffer), "Display buffer bitmap has been destroyed!");
-		auto bufferSurface = (SDL_Surface*)(g_ViewData.buffer);
+		auto bufferData = (BitmapData*)(g_ViewData.buffer);
+		auto bufferTexture = bufferData->texture;
 
-		SDL_Rect area = {
-			.x = 0, .y = 0,
-			.w = g_ViewData.dpyX, .h = g_ViewData.dpyX
-		};
+		ASSERT(SDL_SetRenderTarget(
+			g_pRenderer, 
+			nullptr
+		), SDL_GetError());
 
-		void* pixels = NULL;
-		int pitch = 0;
+		ASSERT(SDL_RenderClear(
+			g_pRenderer
+		), SDL_GetError());
 
-		BitmapLock(g_ViewData.buffer);
-		ASSERT(SDL_UpdateTexture(streamingTexture, nullptr, bufferSurface->pixels, bufferSurface->pitch), SDL_GetError());
-		BitmapUnlock(g_ViewData.buffer);
+		ASSERT(SDL_RenderTexture(
+			g_pRenderer, 
+			bufferTexture, 
+			nullptr, 
+			nullptr
+		), SDL_GetError());
 
-		//ASSERT(SDL_LockTexture(streamingTexture, &area, &pixels, &pitch), SDL_GetError());
-		//{
-		//	auto dst = static_cast<uint8_t*>(pixels);
-		//	auto src = static_cast<uint8_t*>(bufferSurface->pixels);
-
-		//	const int rowBytes = bufferSurface->w * g_pSuportedPixelFormat->bytes_per_pixel;
-
-		//	for (int y = 0; y < bufferSurface->h; ++y)
-		//	{
-		//		std::memcpy(dst, src, rowBytes);
-		//		dst += pitch;
-		//		src += bufferSurface->pitch;
-		//	}
-		//}
-		//SDL_UnlockTexture(streamingTexture);
-
-		ASSERT(SDL_RenderClear(g_pRenderer), SDL_GetError());
-		{
-			ASSERT(SDL_RenderTexture(g_pRenderer, streamingTexture, nullptr, nullptr), SDL_GetError());
-		}
-		ASSERT(SDL_RenderPresent(g_pRenderer), SDL_GetError());
+		ASSERT(SDL_RenderPresent(
+			g_pRenderer
+		), SDL_GetError());
 	}
 }

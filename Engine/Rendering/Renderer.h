@@ -15,5 +15,7 @@ namespace gfx
 	Bitmap GetScreenBuffer(void);
 	Rect   GetScreenRect(void);
 
+	void RaiseWindowResizeEvent(void);
+
 	void Flush();
 }
