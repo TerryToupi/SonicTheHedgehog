@@ -12,10 +12,12 @@ namespace gfx
 
 	Color  GetBackgroundColor(void);
 	void   SetBackgroundColor(Color c);
+
+	void   SetScreenBuffer(Dim x, Dim y);
 	Bitmap GetScreenBuffer(void);
 	Rect   GetScreenRect(void);
 
 	void RaiseWindowResizeEvent(void);
 
-	void Flush();
+	void Flush(void);
 }

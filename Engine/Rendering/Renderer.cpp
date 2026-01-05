@@ -16,6 +16,7 @@ namespace gfx
 	{
 		bool   dpyChanged = false;
 		Dim	   dpyX = 0, dpyY = 0;
+		Dim	   bufX = 0, bufY = 0;
 		Bitmap buffer = nullptr;
 	} g_ViewData;
 
@@ -52,9 +53,6 @@ namespace gfx
 
 		g_ViewData.dpyX = rw;
 		g_ViewData.dpyY = rh;
-
-		g_ViewData.buffer = BitmapCreate(g_ViewData.dpyX, g_ViewData.dpyY);
-		ASSERT(g_ViewData.buffer, SDL_GetError());
 	}
 
 	void Close(void)
@@ -68,6 +66,8 @@ namespace gfx
 		SDL_DestroyRenderer(g_pRenderer);
 		SDL_DestroyWindow(g_pWindow);
 	}
+
+	
 
 	Dim GetResWidth(void)
 	{
@@ -91,15 +91,26 @@ namespace gfx
 		g_ClearColor = c;
 	}
 
+	void SetScreenBuffer(Dim x, Dim y)
+	{
+		if (g_ViewData.buffer)
+			BitmapDestroy(g_ViewData.buffer);
+
+		g_ViewData.buffer = BitmapCreate(x, y);
+		g_ViewData.bufX = x;
+		g_ViewData.bufY = y;
+		ASSERT(g_ViewData.buffer, SDL_GetError());
+	}
+
 	Bitmap GetScreenBuffer(void)
 	{
-		ASSERT((g_ViewData.buffer), "Failed. Display buffer has been destroyed!");
+		ASSERT((g_ViewData.buffer), "Failed. Display buffer has not been initialized or has been destroyed!");
 		return g_ViewData.buffer;
 	}
 
 	Rect GetScreenRect(void)
 	{
-		return { 0, 0, g_ViewData.dpyX, g_ViewData.dpyY };
+		return { 0, 0, g_ViewData.bufX, g_ViewData.bufY };
 	}
 
 	void RaiseWindowResizeEvent(void)
@@ -111,7 +122,7 @@ namespace gfx
 	{
 		if (g_ViewData.dpyChanged)
 		{
-			ASSERT((g_ViewData.buffer), "Display buffer bitmap has been destroyed!");
+			ASSERT((g_pWindow), "Window has been destroyed!");
 
 			ASSERT(SDL_GetWindowSize(
 				g_pWindow, 
@@ -119,19 +130,12 @@ namespace gfx
 				(int*)(&g_ViewData.dpyY)
 			), SDL_GetError());
 
-			BitmapDestroy(g_ViewData.buffer);
-
-			g_ViewData.buffer = BitmapCreate(g_ViewData.dpyX, g_ViewData.dpyY);
-			ASSERT(g_ViewData.buffer, SDL_GetError());
-
 			g_ViewData.dpyChanged = false;
 		}
 	}
 
 	void Flush()
 	{
-		ResizeWindow();
-
 		ASSERT((g_ViewData.buffer), "Display buffer bitmap has been destroyed!");
 		auto bufferData = (BitmapData*)(g_ViewData.buffer);
 		auto bufferTexture = bufferData->texture;

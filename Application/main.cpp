@@ -9,6 +9,7 @@ int main(void)
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
 	gfx::Open("TOU KARAGIOZI TO SKAMNI", 1024, 720);
+	gfx::SetScreenBuffer(1024, 720);
 
 	gfx::BitmapLoader loader;
 	gfx::Bitmap bmp = loader.Load(std::string(ASSETS) + "/Textures/a.png");
@@ -21,8 +22,8 @@ int main(void)
 		{
 			if (event.type == SDL_EVENT_QUIT)
 				close = true;
-			//else if (event.type == SDL_EVENT_WINDOW_RESIZED)
-			//	gfx::RaiseWindowResizeEvent();
+			if (event.type == SDL_EVENT_WINDOW_RESIZED)
+				gfx::RaiseWindowResizeEvent();
 		}
 
 		gfx::BitmapBlit(
@@ -37,6 +38,27 @@ int main(void)
 			{ 0, 0, gfx::BitmapGetWidth(bmp), gfx::BitmapGetHeight(bmp) },
 			gfx::GetScreenBuffer(),
 			{ 40, 40 }
+		);
+
+		gfx::BitmapBlit(
+			bmp,
+			{ 0, 0, gfx::BitmapGetWidth(bmp), gfx::BitmapGetHeight(bmp) },
+			gfx::GetScreenBuffer(),
+			{ 500, 500 }
+		);
+
+		gfx::BitmapBlit(
+			bmp,
+			{ 0, 0, gfx::BitmapGetWidth(bmp), gfx::BitmapGetHeight(bmp) },
+			gfx::GetScreenBuffer(),
+			{ 40, 500 }
+		);
+
+		gfx::BitmapBlit(
+			bmp,
+			{ 0, 0, gfx::BitmapGetWidth(bmp), gfx::BitmapGetHeight(bmp) },
+			gfx::GetScreenBuffer(),
+			{ 500, 40 }
 		);
 
 		gfx::Flush();

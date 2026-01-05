@@ -95,7 +95,7 @@ namespace gfx
 
 		ASSERT(SDL_SetTextureScaleMode(
 			texture,
-			SDL_SCALEMODE_LINEAR
+			SDL_SCALEMODE_NEAREST
 		), SDL_GetError());
 
 		BitmapData* bitmap = AllocateBitmapData();
@@ -148,7 +148,7 @@ namespace gfx
 
 		ASSERT(SDL_SetTextureScaleMode(
 			texture,
-			SDL_SCALEMODE_LINEAR
+			SDL_SCALEMODE_NEAREST
 		), SDL_GetError());
 
 		BitmapData* bitmap = AllocateBitmapData();
@@ -195,7 +195,7 @@ namespace gfx
 
 		ASSERT(SDL_SetTextureScaleMode(
 			cpyTexture,
-			SDL_SCALEMODE_LINEAR
+			SDL_SCALEMODE_NEAREST
 		), SDL_GetError());
 
 		BitmapData* bitmap = AllocateBitmapData();
