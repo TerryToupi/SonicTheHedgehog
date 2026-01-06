@@ -6,7 +6,7 @@ typedef unsigned char  byte;
 typedef unsigned short Dim;
 
 typedef uint64_t Time;
-typedef uint64_t TimeSamp;
+typedef uint64_t TimeStamp;
 
 struct Rect
 {

@@ -2,7 +2,6 @@
 
 namespace anim
 {
-
 	const anim::MovingPathAnimation::Path& MovingPathAnimation::GetPath(void) const
 	{
 		return m_Path;

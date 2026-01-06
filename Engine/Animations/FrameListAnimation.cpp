@@ -2,7 +2,6 @@
 
 namespace anim
 {
-
 	const FrameListAnimation::Frames& FrameListAnimation::GetFrames(void) const
 	{
 		return m_Frames;

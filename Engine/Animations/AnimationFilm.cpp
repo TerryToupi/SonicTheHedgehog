@@ -1,10 +1,8 @@
 #include "Animations/AnimationFilm.h" 
-
 #include "Utils/Assert.h"
 
 namespace anim
 {
-
 	byte AnimationFilm::GetTotalFrames(void) const
 	{
 		return (byte)m_Boxes.size();

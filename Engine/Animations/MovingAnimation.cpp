@@ -2,7 +2,6 @@
 
 namespace anim
 {
-
 	int MovingAnimation::GetDx(void) const
 	{
 		return m_Dx;

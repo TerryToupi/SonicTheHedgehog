@@ -3,7 +3,6 @@
 
 namespace anim
 {
-
 	unsigned TickAnimation::GetDelay(void) const
 	{
 		return m_Delay;
