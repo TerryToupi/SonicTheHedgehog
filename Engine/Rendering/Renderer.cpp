@@ -12,6 +12,12 @@ namespace gfx
 	Color						  g_ClearColor;
 	Color						  g_ColorKey;
 
+	struct BitmapData
+	{
+		SDL_Surface* surf = nullptr;
+		SDL_Texture* texture = nullptr;
+	};
+
 	struct ViewData
 	{
 		bool   dpyChanged = false;
@@ -19,12 +25,6 @@ namespace gfx
 		Dim	   bufX = 0, bufY = 0;
 		Bitmap buffer = nullptr;
 	} g_ViewData;
-
-	struct BitmapData
-	{
-		SDL_Surface* surf = nullptr;
-		SDL_Texture* texture = nullptr;
-	};
 }
 
 namespace gfx
