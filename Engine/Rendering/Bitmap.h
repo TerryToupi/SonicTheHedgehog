@@ -29,9 +29,6 @@ namespace gfx
 	void	ReadPixelColor(PixelMemory pixelmem, RGBA* value);
 	void	PutPixel(Bitmap bmp, Dim x, Dim y, Color c);
 
-	void	SetColorKey(Color c);
-	Color	GetColorKey(void);
-
 	void BitmapBlit(
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to

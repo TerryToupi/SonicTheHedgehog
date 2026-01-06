@@ -13,7 +13,6 @@ namespace gfx
 	extern SDL_Renderer*				  g_pRenderer;
 	extern const SDL_PixelFormatDetails*  g_pSuportedPixelFormat;
 	extern Color						  g_ClearColor;
-	extern Color						  g_ColorKey;
 
 	struct BitmapData
 	{
@@ -340,16 +339,6 @@ namespace gfx
 		*(Color*)(base + y * pitch + x * sizeof(Color)) = c;
 
 		BitmapUnlock(bmp);
-	}
-
-	void SetColorKey(Color c)
-	{
-		g_ColorKey = c;
-	}
-
-	Color GetColorKey(void)
-	{
-		return g_ColorKey;
 	}
 
 	void BitmapBlit(Bitmap src, const Rect& from, Bitmap dest, const Point& to)

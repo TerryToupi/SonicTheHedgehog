@@ -10,7 +10,6 @@ namespace gfx
 	SDL_Renderer*				  g_pRenderer = nullptr;
 	const SDL_PixelFormatDetails* g_pSuportedPixelFormat = nullptr;
 	Color						  g_ClearColor;
-	Color						  g_ColorKey;
 
 	struct BitmapData
 	{
@@ -48,7 +47,6 @@ namespace gfx
 		g_pSuportedPixelFormat = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA8888);
 		ASSERT((g_pSuportedPixelFormat), SDL_GetError());
 
-		g_ColorKey	 = MakeColor(255, 0, 255, 255);
 		g_ClearColor = MakeColor(255, 255, 255, 255);
 
 		g_ViewData.dpyX = rw;
