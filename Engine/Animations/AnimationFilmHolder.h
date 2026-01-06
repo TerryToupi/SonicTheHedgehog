@@ -25,7 +25,7 @@ namespace anim
 				std::vector<Rect>& rectsOutput)>;
 
 	public:
-		static const AnimationFilmHolder& Get(void);
+		static auto Get(void) -> AnimationFilmHolder&;
 
 		void Load(const std::string& text, const EntryParser& entryParser);
 		void Load(const std::string& text, const FullParser& parser);

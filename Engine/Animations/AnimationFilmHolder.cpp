@@ -3,7 +3,9 @@
 
 namespace anim
 {
-	const AnimationFilmHolder& AnimationFilmHolder::Get(void)
+	AnimationFilmHolder AnimationFilmHolder::s_Holder;
+
+	auto AnimationFilmHolder::Get(void) -> AnimationFilmHolder&
 	{
 		return s_Holder;
 	}

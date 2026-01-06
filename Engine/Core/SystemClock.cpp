@@ -1,7 +1,9 @@
 #include "Core/SystemClock.h"
 
 namespace core
-{
+{ 
+	SystemClock SystemClock::s_SystemClock;
+
 	auto SystemClock::Get(void) -> SystemClock&
 	{
 		return s_SystemClock;

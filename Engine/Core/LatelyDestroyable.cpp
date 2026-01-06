@@ -3,6 +3,8 @@
 
 namespace core
 {
+	DestructionManager DestructionManager::s_DestructionManager;
+
 	void DestructionManager::Register(LatelyDestroyable* d)
 	{
 		ASSERT(!d->IsAlive(), "Faild. Commited object for destruction is not dying!");
