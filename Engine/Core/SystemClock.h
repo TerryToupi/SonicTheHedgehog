@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils/Common.h"
+
 #include <chrono>
 
 namespace core
@@ -7,8 +9,6 @@ namespace core
 	class SystemClock final
 	{
 	public:
-		using Time = uint64_t;
-
 		static auto Get(void) -> SystemClock&;
 		Time milli_secs(void) const;
 		Time micro_secs(void) const;

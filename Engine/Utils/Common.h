@@ -1,7 +1,12 @@
 #pragma once
 
+#include <cstdint>
+
 typedef unsigned char  byte;
 typedef unsigned short Dim;
+
+typedef uint64_t Time;
+typedef uint64_t TimeSamp;
 
 struct Rect
 {
