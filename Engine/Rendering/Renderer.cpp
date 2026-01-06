@@ -67,8 +67,6 @@ namespace gfx
 		SDL_DestroyWindow(g_pWindow);
 	}
 
-	
-
 	Dim GetResWidth(void)
 	{
 		ASSERT(!(g_ViewData.dpyChanged), "Window data has beed changed!");

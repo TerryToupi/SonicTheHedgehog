@@ -22,7 +22,7 @@ int main(void)
 		{
 			if (event.type == SDL_EVENT_QUIT)
 				close = true;
-			if (event.type == SDL_EVENT_WINDOW_RESIZED)
+			else if (event.type == SDL_EVENT_WINDOW_RESIZED)
 				gfx::RaiseWindowResizeEvent();
 		}
 
