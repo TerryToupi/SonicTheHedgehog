@@ -9,7 +9,7 @@ int main(void)
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
 	gfx::Open("TOU KARAGIOZI TO SKAMNI", 1024, 720);
-	gfx::SetScreenBuffer(1024, 720);
+	gfx::SetScreenBuffer(540, 540);
 
 	gfx::BitmapLoader loader;
 	gfx::Bitmap bmp = loader.Load(std::string(ASSETS) + "/Textures/a.png");
@@ -25,13 +25,6 @@ int main(void)
 			else if (event.type == SDL_EVENT_WINDOW_RESIZED)
 				gfx::RaiseWindowResizeEvent();
 		}
-
-		gfx::BitmapBlit(
-			cpy,
-			{ 0, 0, gfx::BitmapGetWidth(bmp), gfx::BitmapGetHeight(bmp) },
-			bmp,
-			{ 40, 40 }
-		);
 
 		gfx::BitmapBlit(
 			bmp,

@@ -132,6 +132,8 @@ namespace gfx
 
 	void Flush()
 	{
+		ResizeWindow();
+
 		ASSERT((g_ViewData.buffer), "Display buffer bitmap has been destroyed!");
 		auto bufferData = (BitmapData*)(g_ViewData.buffer);
 		auto bufferTexture = bufferData->texture;
