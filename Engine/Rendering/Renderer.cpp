@@ -30,6 +30,8 @@ namespace gfx
 {
 	void Open(const char* title, Dim rw, Dim rh)
 	{
+		ASSERT(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD), SDL_GetError());
+
 		ASSERT((g_pWindow == nullptr), "Window already initialized!");
 		ASSERT((g_pRenderer == nullptr), "Renderer already initilized!");
 		
@@ -63,6 +65,8 @@ namespace gfx
 		BitmapDestroy(g_ViewData.buffer);
 		SDL_DestroyRenderer(g_pRenderer);
 		SDL_DestroyWindow(g_pWindow);
+
+		SDL_Quit();
 	}
 
 	Dim GetResWidth(void)

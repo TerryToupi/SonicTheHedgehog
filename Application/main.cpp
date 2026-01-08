@@ -6,7 +6,6 @@
 int main(void)
 {
 	bool close = false;
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
 	gfx::Open("TOU KARAGIOZI TO SKAMNI", 1024, 720);
 	gfx::SetScreenBuffer(540, 540);
@@ -59,8 +58,6 @@ int main(void)
 
 	gfx::BitmapDestroy(cpy);
 	gfx::Close();
-
-	SDL_Quit();
 
 	return 0;
 }

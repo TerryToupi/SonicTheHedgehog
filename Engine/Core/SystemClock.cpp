@@ -23,4 +23,19 @@ namespace core
 	{
 		return std::chrono::duration_cast<std::chrono::nanoseconds>(m_Clock.now().time_since_epoch()).count();
 	}
+
+	void SystemClock::SetCurrTime()
+	{
+		m_CurrTime = milli_secs();
+	}
+
+	TimeStamp SystemClock::GetCurrTime() const
+	{
+		return m_CurrTime;
+	}
+
+	void SystemClock::ClearCurrTime()
+	{
+		m_CurrTime = 0;
+	}
 }

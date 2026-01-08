@@ -14,9 +14,14 @@ namespace core
 		Time micro_secs(void) const;
 		Time nano_secs(void) const;
 
+		void	  SetCurrTime();
+		TimeStamp GetCurrTime() const;
+		void      ClearCurrTime();
+
 	private:
 		static SystemClock s_SystemClock;
 
 		std::chrono::high_resolution_clock m_Clock;
+		TimeStamp						   m_CurrTime = 0;
 	};
 }
