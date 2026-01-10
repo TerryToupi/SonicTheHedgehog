@@ -1,11 +1,14 @@
 #pragma once
 
+#include "Scene/Sprite.h"
+
+#include <tuple>
 #include <list>
 #include <functional>
 
 namespace physics
 {
-	class Sprite;
+	using namespace scene;
 
 	class CollisionChecker final
 	{

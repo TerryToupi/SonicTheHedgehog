@@ -8,7 +8,7 @@ namespace anim
 		return (byte)m_Boxes.size();
 	}
 
-	gfx::Bitmap AnimationFilm::GetBitmap(void) const
+	Bitmap AnimationFilm::GetBitmap(void) const
 	{
 		return m_Bitmap;
 	}
