@@ -18,6 +18,7 @@ namespace gfx
 	{
 		SDL_Surface* surf = nullptr;
 		SDL_Texture* texture = nullptr;
+		int isDirty = 0;
 	};
 }
 
@@ -100,6 +101,7 @@ namespace gfx
 		BitmapData* bitmap = AllocateBitmapData();
 		bitmap->surf = surf;
 		bitmap->texture = texture;
+		bitmap->isDirty = 0;
 
 		return (Bitmap)bitmap;
 	}
@@ -153,6 +155,7 @@ namespace gfx
 		BitmapData* bitmap = AllocateBitmapData();
 		bitmap->surf = surf;
 		bitmap->texture = texture;
+		bitmap->isDirty = 0;
 
 		return (Bitmap)bitmap;
 	}
@@ -200,6 +203,7 @@ namespace gfx
 		BitmapData* bitmap = AllocateBitmapData();
 		bitmap->surf = cpySurf;
 		bitmap->texture = cpyTexture;
+		bitmap->isDirty = 0;
 
 		return (Bitmap)bitmap;
 	}
@@ -260,13 +264,42 @@ namespace gfx
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
 		auto bmpData = (BitmapData*)(bmp);
 		auto bmpSurf = bmpData->surf;
+		auto bmpText = bmpData->texture;
 	
+		if (bmpData->isDirty)
+		{
+			ASSERT(SDL_SetRenderTarget(
+				g_pRenderer,
+				bmpText
+			), SDL_GetError());
+		
+			SDL_DestroySurface(bmpData->surf);
+			bmpData->surf = SDL_RenderReadPixels(g_pRenderer, nullptr);
+			ASSERT(bmpData->surf, "FAILED to read texture from gpu and update the gpu surface!");
+
+			if (bmpData->surf->format != g_pSuportedPixelFormat->format)
+			{
+				auto converted = SDL_ConvertSurface(bmpData->surf, g_pSuportedPixelFormat->format);
+				ASSERT(converted, "FAILED to convert to supported pixel formal!");
+				SDL_DestroySurface(bmpData->surf);
+				bmpData->surf = converted;
+			}
+
+			ASSERT(SDL_SetRenderTarget(
+				g_pRenderer,
+				nullptr
+			), SDL_GetError());
+
+			bmpData->isDirty = 0;
+		}
+
 		if (SDL_MUSTLOCK(bmpSurf))
 			if (!SDL_LockSurface(bmpSurf))
 			{
 				ASSERT(false, SDL_GetError());
 				return false;
 			}
+
 
 		return true;
 	}
@@ -370,6 +403,8 @@ namespace gfx
 			g_pRenderer,
 			nullptr	
 		), SDL_GetError());
+
+		destData->isDirty = 1;
 	}
 
 	Bitmap BitmapLoader::Load(const std::string& path)

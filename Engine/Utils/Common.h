@@ -8,6 +8,9 @@ typedef unsigned short Dim;
 typedef uint64_t Time;
 typedef uint64_t TimeStamp;
 
+typedef unsigned long  Index;
+typedef unsigned short GridIndex;
+
 struct Rect
 {
 	int x = 0, y = 0, w = 0, h = 0;

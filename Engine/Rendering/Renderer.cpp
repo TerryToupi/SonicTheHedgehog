@@ -15,6 +15,7 @@ namespace gfx
 	{
 		SDL_Surface* surf = nullptr;
 		SDL_Texture* texture = nullptr;
+		int isDirty = 0;
 	};
 
 	struct ViewData
