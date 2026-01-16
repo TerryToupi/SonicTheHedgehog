@@ -7,6 +7,8 @@
 #include "Utils/Common.h"
 #include "Rendering/Color.h"
 
+#include <functional>
+
 namespace gfx
 {
 	typedef uint8_t*	PixelMemory;
@@ -26,13 +28,17 @@ namespace gfx
 	int			BitmapGetLineOffset(Bitmap bmp);
 
 	void	WritePixelColor(PixelMemory pixelmem, const RGBA& value);
-	void	ReadPixelColor(PixelMemory pixelmem, RGBA* value);
+	void	ReadPixelColor(PixelMemory pixelmem, RGBA* value); 
+	Color   GetPixel(PixelMemory mem);
 	void	PutPixel(Bitmap bmp, Dim x, Dim y, Color c);
 
 	void BitmapBlit(
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to
 	);
+
+	using BitmapAccessFunctor = std::function<bool(PixelMemory)>;
+	void BitmapAccessPixels(Bitmap bmp, const BitmapAccessFunctor& func);
 
 	class BitmapLoader
 	{

@@ -359,6 +359,13 @@ namespace gfx
 		value->a = (RGBValue)((c & GetAlphaBitMaskRGBA()) >> GetAlphaShiftRGBA());
 	}
 
+	gfx::Color GetPixel(PixelMemory mem)
+	{
+		RGBA c;
+		ReadPixelColor(mem, &c);
+		return MakeColor(c.r, c.g, c.b, c.a);
+	}
+
 	void PutPixel(Bitmap bmp, Dim x, Dim y, Color c)
 	{ 
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
@@ -405,6 +412,28 @@ namespace gfx
 		), SDL_GetError());
 
 		destData->isDirty = 1;
+	}
+
+	void BitmapAccessPixels(Bitmap bmp, const BitmapAccessFunctor& func)
+	{
+		ASSERT(BitmapLock(bmp), "FAILED. BitmapAccessPixels failed to lock bitmap!");
+
+		auto mem = BitmapGetMemory(bmp);
+		auto offset = BitmapGetLineOffset(bmp);
+		auto bpp = g_pSuportedPixelFormat->bytes_per_pixel;
+
+		for (auto y = BitmapGetHeight(bmp); y--;)
+		{
+			auto buff = mem;
+			for (auto x = BitmapGetWidth(bmp); x--;)
+			{
+				func(buff);
+				buff += bpp;
+			}
+			mem += offset;
+		}
+
+		BitmapUnlock(bmp);
 	}
 
 	Bitmap BitmapLoader::Load(const std::string& path)
