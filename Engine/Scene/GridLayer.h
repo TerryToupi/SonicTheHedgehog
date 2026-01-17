@@ -2,14 +2,12 @@
 
 #include "Utils/Common.h"
 #include "Rendering/Bitmap.h"
-#include "Core/LatelyDestroyable.h"
 
 #include <vector>
 
 namespace scene
 {
 	using namespace gfx;
-	using namespace core;
 
 	class TileLayer;
 
@@ -26,6 +24,9 @@ namespace scene
 
 	struct GridConfig
 	{
+		Dim totalRows = 0;
+		Dim totalCols = 0;
+
 		Dim tileWidth = 16;
 		Dim tileHeight = 16;
 
@@ -33,25 +34,9 @@ namespace scene
 		Dim gridElementHeight = 4;
 
 		Dim SlopMaxElevetionPx = 32;
-
-		Dim totalRows = 0;
-		Dim totalCols = 0;
-
-		Dim GridBlockColumns();
-		Dim GridBlockRows();
-		Dim GridElementsPerTile();
-
-		Dim DivGridElementWidth(Dim i);
-		Dim DivGridElementHeight(Dim i);
-		Dim MulGridElementWidth(Dim i);
-		Dim MulGridElementHeight(Dim i);
-
-		Dim GridBlockSizeof();
-
-		bool Valid() const;
 	};
 
-	class GridMap : public LatelyDestroyable
+	class GridMap 
 	{
 	public:
 		void Configure(GridConfig cfg);
@@ -87,6 +72,17 @@ namespace scene
 
 		bool ComputeIsGridIndexEmpty(Bitmap& gridElem, byte solidThreshold);
 		void ComputeGridBlock(GridIndex* block, Bitmap& tileElem, Bitmap& gridElem, Bitmap& tileSet, byte solidThreshold);
+
+	private:
+		inline Dim GridBlockColumns();
+		inline Dim GridBlockRows();
+		inline Dim GridElementsPerTile();
+		inline Dim DivGridElementWidth(Dim i);
+		inline Dim DivGridElementHeight(Dim i);
+		inline Dim MulGridElementWidth(Dim i);
+		inline Dim MulGridElementHeight(Dim i);
+		inline Dim GridBlockSizeof();
+		inline bool Valid() const;
 
 	private:
 		GridConfig m_config{};

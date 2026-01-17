@@ -2,14 +2,14 @@
 
 #include <cstdint>
 
-typedef unsigned char  byte;
-typedef unsigned short Dim;
+typedef uint8_t  byte;
+typedef uint16_t Dim;
 
 typedef uint64_t Time;
 typedef uint64_t TimeStamp;
 
-typedef unsigned long  Index;
-typedef unsigned short GridIndex;
+typedef uint32_t Index;
+typedef uint16_t GridIndex;
 
 struct Rect
 {

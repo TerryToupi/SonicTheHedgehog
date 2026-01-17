@@ -1,85 +1,91 @@
-//#pragma once 
-//
-//#include "Utils/Common.h"
-//#include "Rendering/Bitmap.h"
-//
-//#include <functional>
-//
-//namespace scene 
-//{
-//	using namespace gfx;
-//
-//	struct TileLayerConfig
-//	{
-//		int	tileWidth = 16;
-//		int	tileHeight = 16;
-//		int	gridElementWidth = 8;
-//		int gridElementHeight = 8;
-//	};
-//
-//	class TileLayer
-//	{
-//	public:
-//		using GridDpyFunk = std::function<void(Bitmap&, int, int, int, int)>;
-//
-//	public:
-//		void SetTile(Dim col, Dim row, Index index);
-//		Index GetTile(Dim col, Dim row) const;
-//		const Point Pick(Dim x, Dim y) const;
-//
-//		const Rect& GetViewWindow(void);
-//		void SetViewWindow(const Rect& r);
-//		void Display(Bitmap& dest, const Rect& displayArea);
-//		Bitmap GetBitmap(void) const;
-//		GridLayer* GetGrid();
-//
-//		int GetPixelWidth(void) const;
-//		int GetPixelHeight(void) const;
-//
-//		unsigned GetTileWidth(void) const;
-//		unsigned GetTileHeight(void) const;
-//
-//		void	PutTile(Bitmap& dest, Dim x, Dim y, Bitmap& tiles, Index tile);
-//		Dim		TileY(Index index);
-//		Dim		TileX(Index index);
-//		Index	MakeIndex(byte row, byte col);
-//
-//		void Scroll(float dx, float dy);
-//		void FilterScrollDistance(int viewStartCoord, int viewSize, int* d, int maxMapSize);
-//		void FilterScroll(int* dx, int* dy);
-//		void ScrollWithBoundsCheck(int _dx, int _dy);
-//		bool CanScrollHoriz(float dx) const;
-//		bool CanScrollVert(float dy) const;
-//
-//		auto ToString(void) const -> const std::string; // unparse
-//		bool FromString(const std::string&); // parse
-//		void Save(const std::string& path) const;
-//		bool Load(const std::string& path);
-//		FILE* WriteText(FILE* fp) const;
-//		bool ReadText(FILE* fp);
-//
-//		void DisplayGrid(Bitmap& dest, const GridDpyFunk& display_f);
-//
-//		TileLayer(const TileLayerConfig& config);
-//		~TileLayer();
-//
-//	private:
-//		void Allocate();
-//
-//	private:
-//		friend class GridLayer;
-//
-//	private:
-//		TileLayerConfig m_Config;
-//
-//		int			m_ID = 0;
-//		Index*		m_Map = nullptr;
-//		GridLayer*	m_grid = nullptr;
-//		Dim			m_Totalrows = 0, m_Totalcolumns = 0;
-//		Bitmap		m_Tileset = nullptr;
-//		Rect		m_ViewWindow{};
-//		Bitmap		m_DpyBuffer = nullptr;
-//		bool		m_DpyChanged = 0;
-//		Dim			m_DpyX = 0, m_DpyY = 0;
-//	};
-//}
+#pragma once
+
+#include "Rendering/Bitmap.h"
+#include "Utils/Common.h"
+#include "Scene/GridLayer.h"
+#include "Core/LatelyDestroyable.h"
+
+#include <vector>
+#include <functional>
+
+namespace scene
+{
+	using namespace gfx;
+	using namespace core;
+
+	struct TileConfig
+	{
+		int			id = 0;
+		Rect		ViewWindow{};
+		const char* tileSetPath = nullptr;
+
+		Dim	totalCols = 0;
+		Dim	totalRows = 0;
+		Dim	tileWidth = 16;
+		Dim	tileHeight = 16;
+	};
+
+	class TileLayer : public LatelyDestroyable
+	{
+	public:
+		using GridDpyFunk = std::function<void(Bitmap&, int, int, int, int)>;
+
+	public:
+		void				Configure(TileConfig& cfg);
+		const TileConfig&	Config(void);
+
+		void		SetTile(Dim col, Dim row, Index index);
+		Index		GetTile(Dim col, Dim row) const;
+		const Point Pick(Dim x, Dim y);
+
+		void		PutTile(Bitmap& dest, Dim x, Dim y, Bitmap& tiles, Index tile);
+		Dim			TileY(Index index);
+		Dim			TileX(Index index);
+		Index		MakeIndex(Dim row, Dim col);
+
+		const Rect& GetViewWindow(void);
+		void		SetViewWindow(const Rect& r);
+		void		Display(Bitmap& dest, const Rect& displayArea);
+		Bitmap		GetBitmap(void) const;
+		int			GetPixelWidth(void) const;
+		int			GetPixelHeight(void) const;
+		GridMap&	GetGrid(void);
+		unsigned	GetTileWidth(void) const;
+		unsigned	GetTileHeight(void) const;
+
+		void Scroll(float dx, float dy);
+		void FilterScrollDistance(int viewStartCoord, int viewSize, int* d, int maxMapSize);
+		void FilterScroll(int* dx, int* dy);
+		void ScrollWithBoundsCheck(int _dx, int _dy);
+		bool CanScrollHoriz(float dx) const;
+		bool CanScrollVert(float dy) const;
+
+		auto ToString(void) const -> const std::string; // unparse
+		bool FromString(const std::string& s); // parse
+
+		void DisplayGrid(Bitmap& dest, const GridDpyFunk& display_f);
+
+		TileLayer() = default;
+		~TileLayer();
+
+	private:
+		inline Index DivTileWidth(Index i);
+		inline Index DivTileHeight(Index i);
+		inline Index MulTileHeight(Index i);
+		inline Index MulTileWidth(Index i);
+
+	private:
+		using MapContainer = std::vector<Index>;
+
+		TileConfig	 m_config{};
+
+		MapContainer m_map;
+		GridMap		 m_grid;
+		Bitmap		 m_tileset = nullptr;
+		Bitmap		 m_dpyBuffer = nullptr;
+		bool		 m_dpyChanged = 0;
+		Dim			 m_dpyX = 0, m_dpyY = 0;
+
+		friend class GridMap;
+	};
+}

@@ -3,61 +3,16 @@
 
 namespace scene
 {
-	Dim GridConfig::GridBlockColumns()
-	{
-		return tileWidth / gridElementWidth;
-	}
-
-	Dim GridConfig::GridBlockRows()
-	{
-		return tileHeight / gridElementHeight;
-	}
-
-	Dim GridConfig::GridElementsPerTile()
-	{
-		return GridBlockColumns() * GridBlockRows();
-	}
-
-	Dim GridConfig::DivGridElementWidth(Dim i)
-	{
-		return i / gridElementWidth;
-	}
-
-	Dim GridConfig::DivGridElementHeight(Dim i)
-	{
-		return i / gridElementHeight;
-	}
-
-	Dim GridConfig::MulGridElementWidth(Dim i)
-	{
-		return i * gridElementWidth;
-	}
-
-	Dim GridConfig::MulGridElementHeight(Dim i)
-	{
-		return i * gridElementHeight;
-	}
-
-	Dim GridConfig::GridBlockSizeof()
-	{
-		return GridElementsPerTile() * sizeof(GridIndex);
-	}
-
-	bool GridConfig::Valid() const
-	{
-		return (tileHeight % gridElementHeight) == 0 && (tileWidth % gridElementWidth) == 0;
-	}
-
 	void GridMap::Configure(GridConfig cfg)
 	{
 		ASSERT(
-			cfg.Valid(), 
+			Valid(), 
 			"FAILED. Configuration provaded for the grid has invalid size of tiles corespondent to the gird.\nMust me tileseize % gridElement == 0!"
 		);
 
 		m_config = cfg;
 		m_grid.resize(
-			(m_config.totalCols * m_config.totalRows * m_config.GridElementsPerTile()), 
+			(m_config.totalCols * m_config.totalRows * GridElementsPerTile()), 
 			GRID_THIN_AIR_MASK
 		);
 	}
@@ -94,13 +49,13 @@ namespace scene
 
 	void GridMap::SetGridTile(Dim col, Dim row, GridIndex index)
 	{
-		Dim totalCols = m_config.totalCols * m_config.GridBlockColumns();
+		Dim totalCols = m_config.totalCols * GridBlockColumns();
 		m_grid[row * totalCols + col] = index;
 	}
 
 	GridIndex GridMap::GetGridTile(Dim col, Dim row)
 	{
-		Dim totalCols = m_config.totalCols * m_config.GridBlockColumns();
+		Dim totalCols = m_config.totalCols * GridBlockColumns();
 		return m_grid[row * totalCols + col];
 	}
 
@@ -131,14 +86,14 @@ namespace scene
 
 	GridIndex* GridMap::GetGridTileBlock(Dim colTile, Dim rowTile, Dim tileCols)
 	{
-		Dim pos = (rowTile * tileCols + colTile) * m_config.GridElementsPerTile();
+		Dim pos = (rowTile * tileCols + colTile) * GridElementsPerTile();
 		return m_grid.data() + pos;
 	}
 
 	void GridMap::SetGridTileBlock(Dim colTile, Dim rowTile, Dim tileCols, GridIndex flags)
 	{
 		GridIndex* block = GetGridTileBlock(colTile, rowTile, tileCols);
-		std::fill_n(block, m_config.GridElementsPerTile(), flags);
+		std::fill_n(block, GridElementsPerTile(), flags);
 	}
 
 	void GridMap::FilterGridMotionDown(Rect& r, int* dy)
@@ -146,23 +101,23 @@ namespace scene
 		auto y2 = r.y + r.h - 1;
 		auto y2_next = y2 + *dy;
 
-		if (y2_next >= m_config.totalRows * m_config.GridBlockRows())
-			*dy = ((m_config.totalRows * m_config.GridBlockRows()) - 1) - y2;
+		if (y2_next >= m_config.totalRows * GridBlockRows())
+			*dy = ((m_config.totalRows * GridBlockRows()) - 1) - y2;
 		else 
 		{
-			auto newRow = m_config.DivGridElementHeight(y2_next);
-			auto currRow = m_config.DivGridElementWidth(y2);
+			auto newRow = DivGridElementHeight(y2_next);
+			auto currRow = DivGridElementWidth(y2);
 
 			if (newRow != currRow) 
 			{
-				auto startCol = m_config.DivGridElementWidth(r.x);
-				auto endCol = m_config.DivGridElementWidth(r.x + r.w - 1);
+				auto startCol = DivGridElementWidth(r.x);
+				auto endCol = DivGridElementWidth(r.x + r.w - 1);
 
 				for (auto col = startCol; col <= endCol; ++col)
 				{
 					if (!CanPassGridTile(col, newRow, GRID_TOP_SOLID_MASK))
 					{
-						*dy = (m_config.MulGridElementHeight(newRow) - 1) - y2;
+						*dy = (MulGridElementHeight(newRow) - 1) - y2;
 						break;
 					}
 				}
@@ -178,19 +133,19 @@ namespace scene
 			*dx = -r.x;
 		else 
 		{
-			auto newCol = m_config.DivGridElementWidth(x1_next);
-			auto currCol = m_config.DivGridElementWidth(r.x);
+			auto newCol = DivGridElementWidth(x1_next);
+			auto currCol = DivGridElementWidth(r.x);
 
 			if (newCol != currCol) 
 			{
-				auto startRow = m_config.DivGridElementHeight(r.y);
-				auto endRow = m_config.DivGridElementHeight(r.y + r.h - 1);
+				auto startRow = DivGridElementHeight(r.y);
+				auto endRow = DivGridElementHeight(r.y + r.h - 1);
 
 				for (auto row = startRow; row <= endRow; ++row)
 				{
 					if (!CanPassGridTile(newCol, row, GRID_RIGHT_SOLID_MASK)) 
 					{
-						*dx = m_config.DivGridElementWidth(currCol) - r.x;
+						*dx = DivGridElementWidth(currCol) - r.x;
 						break;
 					}
 				}
@@ -203,23 +158,23 @@ namespace scene
 		auto x2 = r.x + r.w - 1;
 		auto x2_next = x2 + *dx;
 
-		if (x2_next >= m_config.totalCols * m_config.GridBlockColumns())
-			*dx = ((m_config.totalCols * m_config.GridBlockColumns()) - 1) - x2;
+		if (x2_next >= m_config.totalCols * GridBlockColumns())
+			*dx = ((m_config.totalCols * GridBlockColumns()) - 1) - x2;
 		else 
 		{
-			auto newCol = m_config.DivGridElementWidth(x2_next);
-			auto currCol = m_config.DivGridElementWidth(x2);
+			auto newCol = DivGridElementWidth(x2_next);
+			auto currCol = DivGridElementWidth(x2);
 
 			if (newCol != currCol) 
 			{
-				auto startRow = m_config.DivGridElementHeight(r.y);
-				auto endRow = m_config.DivGridElementHeight(r.y + r.h - 1);
+				auto startRow = DivGridElementHeight(r.y);
+				auto endRow = DivGridElementHeight(r.y + r.h - 1);
 
 				for (auto row = startRow; row <= endRow; ++row)
 				{
 					if (!CanPassGridTile(newCol, row, GRID_LEFT_SOLID_MASK)) 
 					{
-						*dx = (m_config.MulGridElementWidth(newCol) - 1) - x2;
+						*dx = (MulGridElementWidth(newCol) - 1) - x2;
 						break;
 					}
 				}
@@ -234,20 +189,20 @@ namespace scene
 			*dy = -r.y;
 		else 
 		{
-			auto newRow = m_config.DivGridElementHeight(y1_next);
-			auto currRow = m_config.DivGridElementWidth(r.y);
+			auto newRow = DivGridElementHeight(y1_next);
+			auto currRow = DivGridElementWidth(r.y);
 
 			if (newRow != currRow) 
 			{
 
-				auto startCol = m_config.DivGridElementWidth(r.x);
-				auto endCol = m_config.DivGridElementWidth(r.x + r.w - 1);
+				auto startCol = DivGridElementWidth(r.x);
+				auto endCol = DivGridElementWidth(r.x + r.w - 1);
 
 				for (auto col = startCol; col <= endCol; ++col)
 				{
 					if (!CanPassGridTile(col, newRow, GRID_BOTTOM_SOLID_MASK)) 
 					{
-						*dy = m_config.MulGridElementHeight(currRow) - r.y;
+						*dy = MulGridElementHeight(currRow) - r.y;
 						break;
 					}
 				}
@@ -282,8 +237,6 @@ namespace scene
 
 	bool GridMap::ComputeIsGridIndexEmpty(Bitmap& gridElem, byte solidThreshold)
 	{
-		//TODO figure out the transparent color
-
 		auto n = 0;
 		BitmapAccessPixels(
 			gridElem,
@@ -304,10 +257,10 @@ namespace scene
 
 	void GridMap::ComputeGridBlock(GridIndex* block, Bitmap& tileElem, Bitmap& gridElem, Bitmap& tileSet, byte solidThreshold)
 	{
-		for (auto i = 0; i < m_config.GridElementsPerTile(); ++i)
+		for (auto i = 0; i < GridElementsPerTile(); ++i)
 		{
-			auto x = i % m_config.GridBlockColumns();
-			auto y = i / m_config.GridBlockRows();
+			auto x = i % GridBlockColumns();
+			auto y = i / GridBlockRows();
 
 			Rect tl = { 
 				x * m_config.gridElementWidth, 
@@ -326,5 +279,50 @@ namespace scene
 			auto isEmpty = ComputeIsGridIndexEmpty(gridElem, solidThreshold);
 			*block++ = isEmpty ? GRID_EMPTY_TILE : GRID_SOLID_TILE;
 		}
+	}
+
+	inline Dim GridMap::GridBlockColumns()
+	{
+		return m_config.tileWidth / m_config.gridElementWidth;
+	}
+
+	inline Dim GridMap::GridBlockRows()
+	{
+		return m_config.tileHeight / m_config.gridElementHeight;
+	}
+
+	inline Dim GridMap::GridElementsPerTile()
+	{
+		return GridBlockColumns() * GridBlockRows();
+	}
+
+	inline Dim GridMap::DivGridElementWidth(Dim i)
+	{
+		return i / m_config.gridElementWidth;
+	}
+
+	inline Dim GridMap::DivGridElementHeight(Dim i)
+	{
+		return i / m_config.gridElementHeight;
+	}
+
+	inline Dim GridMap::MulGridElementWidth(Dim i)
+	{
+		return i * m_config.gridElementWidth;
+	}
+
+	inline Dim GridMap::MulGridElementHeight(Dim i)
+	{
+		return i * m_config.gridElementHeight;
+	}
+
+	inline Dim GridMap::GridBlockSizeof()
+	{
+		return GridElementsPerTile() * sizeof(GridIndex);
+	}
+
+	inline bool GridMap::Valid() const
+	{
+		return (m_config.tileHeight % m_config.gridElementHeight) == 0 && (m_config.tileWidth % m_config.gridElementWidth) == 0;
 	}
 }
