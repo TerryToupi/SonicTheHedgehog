@@ -1,4 +1,5 @@
 #include "Scene/GridLayer.h"
+#include "Scene/TileLayer.h"
 #include "Utils/Assert.h"
 
 namespace scene
@@ -212,27 +213,26 @@ namespace scene
 
 	void GridMap::ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty)
 	{ 
-		// TODO: when the TileLayer exists
+		Bitmap tileElement = BitmapCreate(m_config.tileWidth, m_config.tileHeight);
+		Bitmap gridElement = BitmapCreate(m_config.gridElementWidth, m_config.gridElementHeight);
 
-		//Bitmap tileElement;
-		//tileElement.Generate(TILE_WIDTH, TILE_HEIGHT);
-		//Bitmap gridElement;
-		//gridElement.Generate(GRID_ELEMENT_WIDTH, GRID_ELEMENT_HEIGHT);
+		auto index = tlayer->GetTile(col, row);
+		if (assumtedEmpty)
+			SetGridTileBlock(col, row, tileCols, GRID_EMPTY_TILE);
+		else
+		{
+			tlayer->PutTile(tileElement, 0, 0, tlayer->m_tileset, index);
+			ComputeGridBlock(
+				GetGridTileBlock(col, row, tileCols),
+				tileElement,
+				gridElement,
+				tlayer->m_tileset,
+				solidThreshold
+			);
+		}
 
-		//auto index = tlayer->GetTile(col, row);
-		//if (assumtedEmpty)
-		//	SetGridTileBlockEmpty(col, row, tileCols);
-		//else
-		//{
-		//	tlayer->PutTile(tileElement, 0, 0, tlayer->m_Tileset, index);
-		//	ComputeGridBlock(
-		//		GetGridTileBlock(col, row, tileCols),
-		//		tileElement,
-		//		gridElement,
-		//		tlayer->m_Tileset,
-		//		solidThreshold
-		//	);
-		//}
+		BitmapDestroy(tileElement);
+		BitmapDestroy(gridElement);
 	}
 
 	bool GridMap::ComputeIsGridIndexEmpty(Bitmap& gridElem, byte solidThreshold)
