@@ -16,8 +16,7 @@ namespace scene
 	struct TileConfig
 	{
 		int			id = 0;
-		Rect		ViewWindow{};
-		const char* tileSetPath = nullptr;
+		Rect		viewWindow{};
 
 		Dim	totalCols = 0;
 		Dim	totalRows = 0;
@@ -45,13 +44,13 @@ namespace scene
 
 		const Rect& GetViewWindow(void);
 		void		SetViewWindow(const Rect& r);
-		void		Display(Bitmap& dest, const Rect& displayArea);
+		void		Display(Bitmap& dest, const Point& dp);
 		Bitmap		GetBitmap(void) const;
 		int			GetPixelWidth(void) const;
 		int			GetPixelHeight(void) const;
 		GridMap&	GetGrid(void);
-		unsigned	GetTileWidth(void) const;
-		unsigned	GetTileHeight(void) const;
+		unsigned	GetTileWidth(void);
+		unsigned	GetTileHeight(void);
 
 		void Scroll(float dx, float dy);
 		void FilterScrollDistance(int viewStartCoord, int viewSize, int* d, int maxMapSize);
@@ -73,6 +72,8 @@ namespace scene
 		inline Index DivTileHeight(Index i);
 		inline Index MulTileHeight(Index i);
 		inline Index MulTileWidth(Index i);
+		inline Index ModTileWidth(Index i);
+		inline Index ModTileHeight(Index i);
 
 	private:
 		using MapContainer = std::vector<Index>;
@@ -83,7 +84,7 @@ namespace scene
 		GridMap		 m_grid;
 		Bitmap		 m_tileset = nullptr;
 		Bitmap		 m_dpyBuffer = nullptr;
-		bool		 m_dpyChanged = 0;
+		bool		 m_dpyChanged = true;
 		Dim			 m_dpyX = 0, m_dpyY = 0;
 
 		friend class GridMap;

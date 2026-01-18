@@ -9,8 +9,6 @@ namespace scene
 {
 	using namespace gfx;
 
-	class TileLayer;
-
 	inline constexpr unsigned short GRID_THIN_AIR_MASK = 0x00; // element is ignored
 	inline constexpr unsigned short GRID_LEFT_SOLID_MASK = 0x01; // bit 0
 	inline constexpr unsigned short GRID_RIGHT_SOLID_MASK = 0x02; // bit 1
@@ -38,6 +36,9 @@ namespace scene
 
 	class GridMap 
 	{
+	private:
+		friend class TileLayer;
+
 	public:
 		void Configure(GridConfig cfg);
 		const GridConfig& Config() const;

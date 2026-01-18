@@ -2,6 +2,33 @@
 
 namespace scene
 {
+	void TileLayer::DisplayGrid(Bitmap& dest, const GridDpyFunk& display_f)
+	{
+		auto startCol = DivTileWidth(m_config.viewWindow.x);
+		auto startRow = DivTileHeight(m_config.viewWindow.y);
+		auto endCol = DivTileWidth(m_config.viewWindow.x + m_config.viewWindow.w - 1);
+		auto endRow = DivTileHeight(m_config.viewWindow.y + m_config.viewWindow.h - 1);
+
+		for (Dim rowTile = startRow; rowTile <= endRow; ++rowTile)
+			for (Dim colTile = startCol; colTile <= endCol; ++colTile) 
+			{
+				auto sx = MulTileWidth(colTile - startCol);
+				auto sy = MulTileHeight(rowTile - startRow);
+				auto* gridBlock = m_grid.GetGridTileBlock(colTile, rowTile, m_config.totalCols);
+
+				for (auto rowElem = 0; rowElem < m_grid.GridBlockRows(); ++rowElem)
+					for (auto colElem = 0; colElem < m_grid.GridBlockColumns(); ++colElem)
+						if (*gridBlock++ & GRID_SOLID_TILE) 
+						{
+							auto x = sx + m_grid.MulGridElementWidth(colElem);
+							auto y = sy + m_grid.MulGridElementHeight(rowElem);
+							auto w = m_grid.Config().gridElementWidth - 1;
+							auto h = m_grid.Config().gridElementHeight - 1;
+							display_f(dest, x, y, w, h);
+						}
+			}
+	}
+
 	TileLayer::~TileLayer()
 	{
 		if (m_tileset)
@@ -30,6 +57,22 @@ namespace scene
 		return Index(i * m_config.tileWidth);
 	}
 
+	inline Index TileLayer::ModTileWidth(Index i)
+	{
+		return Index(i % m_config.tileWidth);
+	}
+
+	inline Index TileLayer::ModTileHeight(Index i)
+	{
+		return Index(i % m_config.tileHeight);
+	}
+
+	void TileLayer::Configure(TileConfig& cfg)
+	{
+		m_config = cfg;
+		m_dpyBuffer = BitmapCreate(m_config.viewWindow.w, m_config.viewWindow.h);
+	}
+
 	const TileConfig& TileLayer::Config(void)
 	{
 		return m_config;
@@ -47,8 +90,8 @@ namespace scene
 
 	const Point TileLayer::Pick(Dim x, Dim y) 
 	{
-		Index ix = DivTileWidth(x + m_config.ViewWindow.x);
-		Index iy = DivTileWidth(y + m_config.ViewWindow.y);
+		Index ix = DivTileWidth(x + m_config.viewWindow.x);
+		Index iy = DivTileWidth(y + m_config.viewWindow.y);
 		return { (int)ix, (int)iy };
 	}
 
@@ -75,5 +118,119 @@ namespace scene
 	Index TileLayer::MakeIndex(Dim row, Dim col)
 	{
 		return (Index(row) << 16) | Index(col);
+	}
+
+	const Rect& TileLayer::GetViewWindow(void)
+	{
+		return m_config.viewWindow;
+	}
+
+	void TileLayer::SetViewWindow(const Rect& r)
+	{
+		m_config.viewWindow = r;
+		m_dpyChanged = true;
+	}
+
+	void TileLayer::Display(Bitmap& dest, const Point& dp)
+	{
+		if (m_dpyChanged)
+		{
+			auto startCol = DivTileWidth(m_config.viewWindow.x);
+			auto startRow = DivTileHeight(m_config.viewWindow.y);
+			auto endCol = DivTileWidth(m_config.viewWindow.x + m_config.viewWindow.w - 1);
+			auto endRow = DivTileHeight(m_config.viewWindow.y + m_config.viewWindow.h - 1);
+			m_dpyX = ModTileWidth(m_config.viewWindow.x);
+			m_dpyY = ModTileHeight(m_config.viewWindow.y);
+			m_dpyChanged = false;
+
+			for (Dim row = startRow; row <= endRow; ++row)
+				for (Dim col = startCol; col <= endCol; ++col)
+					PutTile(
+						m_dpyBuffer,
+						MulTileWidth(col - startCol),
+						MulTileHeight(row - startRow),
+						m_tileset,
+						GetTile(row, col)
+					);
+		}
+
+		BitmapBlit(
+			m_dpyBuffer,
+			{ m_dpyX, m_dpyY, m_config.viewWindow.w, m_config.viewWindow.h },
+			dest,
+			{ dp.x, dp.y }
+		);
+	}
+
+	Bitmap TileLayer::GetBitmap(void) const
+	{
+		return m_dpyBuffer;
+	}
+
+	int TileLayer::GetPixelWidth(void) const
+	{
+		return m_config.viewWindow.w;
+	}
+
+	int TileLayer::GetPixelHeight(void) const
+	{
+		return m_config.viewWindow.h;
+	}
+
+	GridMap& TileLayer::GetGrid(void)
+	{
+		return m_grid;
+	}
+
+	unsigned TileLayer::GetTileWidth(void) 
+	{
+		return DivTileWidth(m_config.viewWindow.w);
+	}
+
+	unsigned TileLayer::GetTileHeight(void)
+	{
+		return DivTileHeight(m_config.viewWindow.h);
+	}
+
+	void TileLayer::Scroll(float dx, float dy)
+	{
+		m_config.viewWindow.x += dx;
+		m_config.viewWindow.y += dy;
+		m_dpyChanged = true;
+	}
+
+	void TileLayer::FilterScrollDistance(int viewStartCoord, int viewSize, int* d, int maxMapSize)
+	{
+		auto val = *d + viewStartCoord;
+		if (val < 0)
+			*d = viewStartCoord;
+
+		else if (viewSize >= maxMapSize)
+			*d = 0;
+
+		else if ((val + viewSize) >= maxMapSize)
+			*d = maxMapSize - (viewStartCoord + viewSize);
+	}
+
+	void TileLayer::FilterScroll(int* dx, int* dy)
+	{
+		FilterScrollDistance(m_config.viewWindow.x, m_config.viewWindow.w, dx, GetPixelWidth());
+		FilterScrollDistance(m_config.viewWindow.y, m_config.viewWindow.h, dy, GetPixelHeight());
+	}
+
+	void TileLayer::ScrollWithBoundsCheck(int _dx, int _dy)
+	{
+		FilterScroll(&_dx, &_dy);
+		Scroll(_dx, _dy);
+	}
+
+	bool TileLayer::CanScrollHoriz(float dx) const
+	{
+		return (m_config.viewWindow.x >= -dx) && (m_config.viewWindow.x + m_config.viewWindow.w + dx) <= (m_config.totalCols * m_config.tileWidth);
+	}
+
+	bool TileLayer::CanScrollVert(float dy) const
+	{
+		return (m_config.viewWindow.y >= -dy) && (m_config.viewWindow.y + m_config.viewWindow.h + dy) <= (m_config.totalRows * m_config.tileHeight);
 	}
 }
