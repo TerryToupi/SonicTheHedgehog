@@ -3,32 +3,23 @@
 
 namespace core
 { 
-	MouseEvent		EventRegistry::s_mouseEvents;
-	KeyEvent		EventRegistry::s_keyEvents;
-	CloseEvent		EventRegistry::s_closeEvents;
-	ResizeEvent		EventRegistry::s_resizeEvents;
-	PauseEvent		EventRegistry::s_pauseEvents;
-	ControllerEvent	EventRegistry::s_controllerEvents;
-
-	void EventRegistry::Update()
-	{
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			if (event.type == SDL_EVENT_QUIT)
-				s_closeEvents.Emit();
-
-			else if (event.type == SDL_EVENT_WINDOW_RESIZED)
-				s_resizeEvents.Emit(event.window.data1, event.window.data2);
-		}
-	}
+	MouseMotionEvent EventRegistry::s_mouseMotionEvents;
+	MouseButtonEvent EventRegistry::s_mouseButtonEvents;
+	KeyEvent		 EventRegistry::s_keyEvents;
+	CloseEvent		 EventRegistry::s_closeEvents;
+	ResizeEvent		 EventRegistry::s_resizeEvents;
+	PauseEvent		 EventRegistry::s_pauseEvents;
+	ControllerEvent	 EventRegistry::s_controllerEvents;
 
 	void EventRegistry::Unsubscribe(EventType type, int id)
 	{
 		switch (type)
 		{
-		case EventType::MOUSE_EVENT:
-			s_mouseEvents.Unsubscribe(id);
+		case EventType::MOUSE_MORION_EVENT:
+			s_mouseMotionEvents.Unsubscribe(id);
+			break;
+		case EventType::MOUSE_BUTTON_EVENT:
+			s_mouseButtonEvents.Unsubscribe(id);
 			break;
 		case EventType::KEY_EVENT:
 			s_keyEvents.Unsubscribe(id);
@@ -48,6 +39,41 @@ namespace core
 		default:
 			break;
 		}
+	}
+
+	void EventRegistry::EmitMouseMotionEvents(int x, int y)
+	{
+		s_mouseMotionEvents.Emit(x, y);
+	}
+
+	void EventRegistry::EmitResizeEvents(int x, int y)
+	{
+		s_resizeEvents.Emit(x, y);
+	}
+
+	void EventRegistry::EmitKeyEvents(io::Key key)
+	{
+		s_keyEvents.Emit(key);
+	}
+
+	void EventRegistry::EmitCloseEvents(void)
+	{
+		s_closeEvents.Emit();
+	}
+
+	void EventRegistry::EmitPauseEvents(void)
+	{
+		s_pauseEvents.Emit();
+	}
+
+	void EventRegistry::EmitControllerEvents(void)
+	{
+		s_controllerEvents.Emit();
+	}
+
+	void EventRegistry::EmitMouseButtonEvents(io::Button button)
+	{
+		s_mouseButtonEvents.Emit(button);
 	}
 
 	EventHandle::~EventHandle()

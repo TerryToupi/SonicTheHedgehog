@@ -1,17 +1,18 @@
-#include <SDL3/SDL.h>
-
 #include "Rendering/Renderer.h"
 #include "Scene/SpriteManager.h"
 #include "Scene/Sprite.h"
 #include "Core/EventRegistry.h"
+#include "Core/Input.h"
+#include "IO/IOMapping.h"
 
 #include <string>
+
+#include <iostream>
 
 int main(void)
 { 
 	bool close = false;
 	{ 
-
 		gfx::Open("TOU KARAGIOZI TO SKAMNI", 1024, 720);
 		gfx::SetScreenBuffer(1024, 1024);
 
@@ -38,12 +39,37 @@ int main(void)
 
 		gfx::PutPixel(display, 0, 0, gfx::MakeColor(255, 255, 255, 255));
 
-		auto h1 = core::EventRegistry::Subscribe(EventType::CLOSE_EVENT, [&close]() { close = true; });
-		auto h2 = core::EventRegistry::Subscribe(EventType::RESIZE_EVENT, [](int w, int h) { gfx::RaiseWindowResizeEvent(); });
+		auto h1 = core::EventRegistry::Subscribe(EventType::CLOSE_EVENT, 
+			[&close]() { 
+				close = true;
+				std::cout << "Application closing!";
+			});
+
+		auto h2 = core::EventRegistry::Subscribe(EventType::RESIZE_EVENT, 
+			[](int w, int h) { 
+				gfx::RaiseWindowResizeEvent(); 
+				std::cout << "Raised window resize event with x: " << w << " and height y: " << h << std::endl;
+			});
+
+		auto h3 = core::EventRegistry::Subscribe(EventType::MOUSE_MORION_EVENT,
+			[](int x, int y) {
+				std::cout << "[Mouse motion] x: " << x << " y: " << y << std::endl;
+			});
+
+		auto h4 = core::EventRegistry::Subscribe(EventType::MOUSE_BUTTON_EVENT,
+			[](io::Button button) {
+				std::cout << "[Mouse button] button: " << std::endl;
+			});
+
+		auto h5 = core::EventRegistry::Subscribe(EventType::KEY_EVENT,
+			[](io::Key key) {
+				if (key == io::Key::A)
+					std::cout << "[Key event] key: A" << std::endl;
+			});
 
 		while (!close)
 		{ 
-			core::EventRegistry::Update(); 
+			core::Input::Update();
 
 			gfx::BitmapBlit(
 				display,
