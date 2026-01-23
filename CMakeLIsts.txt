@@ -4,6 +4,12 @@ project(SonicTheHedgehog LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-w)
+endif()
+
 set(CMAKE_FOLDER "3.Import")
 add_subdirectory(Import)
 unset(CMAKE_FOLDER)

@@ -23,6 +23,7 @@ msbuild/
 xcode/
 ninja/
 out/
+build/
 
 # Imports
 Import/box2d/
