@@ -29,5 +29,6 @@ namespace io
 	public:
 		static Key		ConvertKey(int code);
 		static Button	ConvertButton(int button);
+		static int		GetScancode(Key key);
 	};
 }
