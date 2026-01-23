@@ -37,6 +37,11 @@ namespace gfx
 		Bitmap dest, const Point& to
 	);
 
+	void BitmapBlitScaled(
+		Bitmap src, const Rect& from,
+		Bitmap dest, const Rect& to
+	);
+
 	using BitmapAccessFunctor = std::function<bool(PixelMemory)>;
 	void BitmapAccessPixels(Bitmap bmp, const BitmapAccessFunctor& func);
 

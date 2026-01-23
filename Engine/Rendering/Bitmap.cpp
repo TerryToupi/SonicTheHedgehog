@@ -408,7 +408,40 @@ namespace gfx
 
 		ASSERT(SDL_SetRenderTarget(
 			g_pRenderer,
-			nullptr	
+			nullptr
+		), SDL_GetError());
+
+		destData->isDirty = 1;
+	}
+
+	void BitmapBlitScaled(Bitmap src, const Rect& from, Bitmap dest, const Rect& to)
+	{
+		ASSERT(src, "Failed. Bitmap was nullptr!");
+		auto srcData = (BitmapData*)(src);
+		auto srcTexture = srcData->texture;
+
+		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
+		auto destData = (BitmapData*)(dest);
+		auto destTexture = destData->texture;
+
+		SDL_FRect srcRect{ (float)from.x, (float)from.y, (float)from.w, (float)from.h };
+		SDL_FRect dstRect{ (float)to.x,   (float)to.y,   (float)to.w,   (float)to.h };
+
+		ASSERT(SDL_SetRenderTarget(
+			g_pRenderer,
+			destTexture
+		), SDL_GetError());
+
+		ASSERT(SDL_RenderTexture(
+			g_pRenderer,
+			srcTexture,
+			&srcRect,
+			&dstRect
+		), SDL_GetError());
+
+		ASSERT(SDL_SetRenderTarget(
+			g_pRenderer,
+			nullptr
 		), SDL_GetError());
 
 		destData->isDirty = 1;
