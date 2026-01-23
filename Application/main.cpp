@@ -3,6 +3,7 @@
 #include "Core/EventRegistry.h"
 #include "Core/Input.h"
 #include "IO/IOMapping.h"
+#include "Sound/Sound.h"
 
 #include <string>
 #include <iostream>
@@ -281,10 +282,12 @@ int main(void)
 
 	// Initialize camera 256px from bottom (where first tile row is)
 	int cameraX = 0;
-	int cameraY = LEVEL_HEIGHT -	 VIEWPORT_HEIGHT - 256;  // 1056
+	int cameraY = LEVEL_HEIGHT - VIEWPORT_HEIGHT - 256;  // 1056
 
 	gfx::Open("Sonic Level Viewer", 1280, 720);
 	gfx::SetScreenBuffer(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);  // Classic resolution, scaled up to window
+
+	sound::Open();
 
 	// Load the sonic level map
 	gfx::BitmapLoader loader;
@@ -472,6 +475,18 @@ int main(void)
 					currentState = GameState::MENU;
 					std::cout << "Returning to menu..." << std::endl;
 				}
+			}
+		});
+
+	std::string sfx_path(ASSETS);
+	sfx_path += "/Sounds/a.mp3";
+	sound::SFX sfx = sound::LoadSFX(sfx_path.c_str());
+
+	auto h5 = core::EventRegistry::Subscribe(EventType::KEY_EVENT,
+		[&sfx](io::Key key) {
+			if (key == io::Key::A)
+			{
+				sound::PlaySFX(sfx);
 			}
 		});
 
@@ -677,6 +692,9 @@ int main(void)
 		std::this_thread::sleep_for(std::chrono::milliseconds(12));
 	}
 
+	sound::DestroySFX(sfx);
+
+	sound::Close();
 	gfx::Close();
 
 	return 0;
