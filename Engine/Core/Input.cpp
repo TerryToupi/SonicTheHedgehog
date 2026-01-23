@@ -30,4 +30,11 @@ namespace core
 				EventRegistry::EmitMouseMotionEvents(event.motion.x, event.motion.y);
 		}
 	}
+
+	bool Input::IsKeyPressed(io::Key key)
+	{
+		const bool* keystate = SDL_GetKeyboardState(nullptr);
+		int scancode = io::IOMapper::GetScancode(key);
+		return scancode != SDL_SCANCODE_UNKNOWN && keystate[scancode];
+	}
 }

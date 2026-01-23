@@ -2,6 +2,9 @@
 #include "Scene/TileLayer.h"
 #include "Utils/Assert.h"
 
+#include <sstream>
+#include <string>
+
 namespace scene
 {
 	void GridMap::Configure(GridConfig cfg)
@@ -233,6 +236,55 @@ namespace scene
 
 		BitmapDestroy(tileElement);
 		BitmapDestroy(gridElement);
+	}
+
+	bool GridMap::LoadFromCSV(const std::string& csvContent)
+	{
+		if (m_grid.empty())
+			return false; // Grid must be configured first
+
+		std::istringstream stream(csvContent);
+		std::string line;
+		Dim row = 0;
+		Dim totalCols = m_config.totalCols * GridBlockColumns();
+		Dim totalRows = m_config.totalRows * GridBlockRows();
+
+		while (std::getline(stream, line) && row < totalRows)
+		{
+			if (line.empty())
+				continue;
+
+			std::istringstream lineStream(line);
+			std::string cell;
+			Dim col = 0;
+
+			while (std::getline(lineStream, cell, ',') && col < totalCols)
+			{
+				int value = std::stoi(cell);
+				GridIndex gridValue;
+
+				// Map CSV values to grid flags
+				if (value == -1)
+					gridValue = GRID_EMPTY_TILE;
+				else if (value == 0)
+					gridValue = GRID_SOLID_TILE;
+				else
+					gridValue = static_cast<GridIndex>(value);
+
+				m_grid[row * totalCols + col] = gridValue;
+				++col;
+			}
+
+			if (col != totalCols)
+				return false; // Column count mismatch
+
+			++row;
+		}
+
+		if (row != totalRows)
+			return false; // Row count mismatch
+
+		return true;
 	}
 
 	bool GridMap::ComputeIsGridIndexEmpty(Bitmap& gridElem, byte solidThreshold)

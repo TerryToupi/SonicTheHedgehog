@@ -62,6 +62,8 @@ namespace scene
 
 		void ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty);
 
+		bool LoadFromCSV(const std::string& csvContent);
+
 		GridMap() = default;
 		~GridMap() = default;
 

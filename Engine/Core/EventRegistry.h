@@ -101,7 +101,7 @@ namespace core
 			else
 			{
 				static_assert(sizeof...(Args) >= 0, "FAILED. Unsuported listener format!");
-				return -1;
+				return { EventType::UNKNOWN_EVENT, -1 };
 			}
 		}
 
