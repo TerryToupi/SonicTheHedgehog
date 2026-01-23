@@ -19,7 +19,7 @@ CMakeUserPresets.json
 #cmake-build-*
 
 # build folders
-vs2026/
+msbuild/
 xcode/
 ninja/
 out/

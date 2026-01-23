@@ -206,7 +206,6 @@ int main(void)
 		std::this_thread::sleep_for(std::chrono::milliseconds(12));
 	}
 
-	gfx::BitmapDestroy(levelMap);
 	gfx::Close();
 
 	return 0;
