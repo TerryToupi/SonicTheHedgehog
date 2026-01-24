@@ -216,26 +216,26 @@ namespace scene
 
 	void GridMap::ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty)
 	{ 
-		Bitmap tileElement = BitmapCreate(m_config.tileWidth, m_config.tileHeight);
-		Bitmap gridElement = BitmapCreate(m_config.gridElementWidth, m_config.gridElementHeight);
+		// Bitmap tileElement = BitmapCreate(m_config.tileWidth, m_config.tileHeight);
+		// Bitmap gridElement = BitmapCreate(m_config.gridElementWidth, m_config.gridElementHeight);
 
-		auto index = tlayer->GetTile(col, row);
-		if (assumtedEmpty)
-			SetGridTileBlock(col, row, tileCols, GRID_EMPTY_TILE);
-		else
-		{
-			tlayer->PutTile(tileElement, 0, 0, tlayer->m_tileset, index);
-			ComputeGridBlock(
-				GetGridTileBlock(col, row, tileCols),
-				tileElement,
-				gridElement,
-				tlayer->m_tileset,
-				solidThreshold
-			);
-		}
+		// auto index = tlayer->GetTile(col, row);
+		// if (assumtedEmpty)
+		// 	SetGridTileBlock(col, row, tileCols, GRID_EMPTY_TILE);
+		// else
+		// {
+		// 	tlayer->PutTile(tileElement, 0, 0, tlayer->m_tileset, index);
+		// 	ComputeGridBlock(
+		// 		GetGridTileBlock(col, row, tileCols),
+		// 		tileElement,
+		// 		gridElement,
+		// 		tlayer->m_tileset,
+		// 		solidThreshold
+		// 	);
+		// }
 
-		BitmapDestroy(tileElement);
-		BitmapDestroy(gridElement);
+		// BitmapDestroy(tileElement);
+		// BitmapDestroy(gridElement);
 	}
 
 	bool GridMap::LoadFromCSV(const std::string& csvContent)
@@ -289,48 +289,48 @@ namespace scene
 
 	bool GridMap::ComputeIsGridIndexEmpty(Bitmap& gridElem, byte solidThreshold)
 	{
-		auto n = 0;
-		BitmapAccessPixels(
-			gridElem,
-			[&n](PixelMemory mem)
-			{
-				RGBA memValue;
-				ReadPixelColor(mem, &memValue);
+		// auto n = 0;
+		// BitmapAccessPixels(
+		// 	gridElem,
+		// 	[&n](PixelMemory mem)
+		// 	{
+		// 		RGBA memValue;
+		// 		ReadPixelColor(mem, &memValue);
 
-				if (memValue.a != 0)
-					++n;
+		// 		if (memValue.a != 0)
+		// 			++n;
 
-				return true;
-			}
-		);
+		// 		return true;
+		// 	}
+		// );
 
-		return n <= solidThreshold;
+		// return n <= solidThreshold;
 	}
 
 	void GridMap::ComputeGridBlock(GridIndex* block, Bitmap& tileElem, Bitmap& gridElem, Bitmap& tileSet, byte solidThreshold)
 	{
-		for (auto i = 0; i < GridElementsPerTile(); ++i)
-		{
-			auto x = i % GridBlockColumns();
-			auto y = i / GridBlockRows();
+		// for (auto i = 0; i < GridElementsPerTile(); ++i)
+		// {
+		// 	auto x = i % GridBlockColumns();
+		// 	auto y = i / GridBlockRows();
 
-			Rect tl = { 
-				x * m_config.gridElementWidth, 
-				y * m_config.gridElementHeight, 
-				m_config.gridElementWidth, 
-				m_config.gridElementHeight 
-			};
+		// 	Rect tl = { 
+		// 		x * m_config.gridElementWidth, 
+		// 		y * m_config.gridElementHeight, 
+		// 		m_config.gridElementWidth, 
+		// 		m_config.gridElementHeight 
+		// 	};
 
-			BitmapBlit(
-				tileElem,
-				tl,
-				gridElem,
-				{ 0, 0 }
-			);
+		// 	BitmapBlit(
+		// 		tileElem,
+		// 		tl,
+		// 		gridElem,
+		// 		{ 0, 0 }
+		// 	);
 
-			auto isEmpty = ComputeIsGridIndexEmpty(gridElem, solidThreshold);
-			*block++ = isEmpty ? GRID_EMPTY_TILE : GRID_SOLID_TILE;
-		}
+		// 	auto isEmpty = ComputeIsGridIndexEmpty(gridElem, solidThreshold);
+		// 	*block++ = isEmpty ? GRID_EMPTY_TILE : GRID_SOLID_TILE;
+		// }
 	}
 
 	inline Dim GridMap::GridBlockColumns()

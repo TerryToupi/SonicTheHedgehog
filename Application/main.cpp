@@ -334,7 +334,7 @@ int main(void)
 	grid.Configure(gridConfig);
 
 	// Load grid from CSV
-	std::ifstream gridFile(std::string(ASSETS) + "/grid.csv");
+	std::ifstream gridFile(std::string(ASSETS) + "/Terrain/grid.csv");
 	if (!gridFile.is_open())
 	{
 		std::cerr << "Failed to open grid.csv" << std::endl;
@@ -492,7 +492,7 @@ int main(void)
 
 	while (!close)
 	{
-		core::Input::Update();
+		core::Input::UpdateInputEvents();
 		gfx::Bitmap screenBuf = gfx::GetScreenBuffer();
 
 		switch (currentState)

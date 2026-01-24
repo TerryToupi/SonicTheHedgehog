@@ -6,7 +6,7 @@
 
 namespace core
 {
-	void Input::Update()
+	void Input::UpdateInputEvents()
 	{
 		SDL_Event event;
 		while (SDL_PollEvent(&event))

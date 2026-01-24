@@ -2,7 +2,6 @@
 
 #include "Rendering/Bitmap.h"
 #include "Utils/Common.h"
-#include "Scene/GridLayer.h"
 #include "Core/LatelyDestroyable.h"
 
 #include <vector>
@@ -27,9 +26,6 @@ namespace scene
 	class TileLayer : public LatelyDestroyable
 	{
 	public:
-		using GridDpyFunk = std::function<void(Bitmap&, int, int, int, int)>;
-
-	public:
 		void				Configure(TileConfig& cfg);
 		const TileConfig&	Config(void);
 
@@ -48,7 +44,6 @@ namespace scene
 		Bitmap		GetBitmap(void) const;
 		int			GetPixelWidth(void) const;
 		int			GetPixelHeight(void) const;
-		GridMap&	GetGrid(void);
 		unsigned	GetTileWidth(void);
 		unsigned	GetTileHeight(void);
 
@@ -59,10 +54,7 @@ namespace scene
 		bool CanScrollHoriz(float dx) const;
 		bool CanScrollVert(float dy) const;
 
-		auto ToString(void) const -> const std::string; // unparse
-		bool FromString(const std::string& s); // parse
-
-		void DisplayGrid(Bitmap& dest, const GridDpyFunk& display_f);
+		bool LoadFromCSV(const std::string& context);
 
 		TileLayer() = default;
 		~TileLayer();
@@ -81,12 +73,9 @@ namespace scene
 		TileConfig	 m_config{};
 
 		MapContainer m_map;
-		GridMap		 m_grid;
 		Bitmap		 m_tileset = nullptr;
 		Bitmap		 m_dpyBuffer = nullptr;
 		bool		 m_dpyChanged = true;
 		Dim			 m_dpyX = 0, m_dpyY = 0;
-
-		friend class GridMap;
 	};
 }

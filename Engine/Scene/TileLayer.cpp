@@ -1,34 +1,10 @@
 #include "Scene/TileLayer.h"
 
+#include <sstream>
+#include <string>
+
 namespace scene
 {
-	void TileLayer::DisplayGrid(Bitmap& dest, const GridDpyFunk& display_f)
-	{
-		auto startCol = DivTileWidth(m_config.viewWindow.x);
-		auto startRow = DivTileHeight(m_config.viewWindow.y);
-		auto endCol = DivTileWidth(m_config.viewWindow.x + m_config.viewWindow.w - 1);
-		auto endRow = DivTileHeight(m_config.viewWindow.y + m_config.viewWindow.h - 1);
-
-		for (Dim rowTile = startRow; rowTile <= endRow; ++rowTile)
-			for (Dim colTile = startCol; colTile <= endCol; ++colTile) 
-			{
-				auto sx = MulTileWidth(colTile - startCol);
-				auto sy = MulTileHeight(rowTile - startRow);
-				auto* gridBlock = m_grid.GetGridTileBlock(colTile, rowTile, m_config.totalCols);
-
-				for (auto rowElem = 0; rowElem < m_grid.GridBlockRows(); ++rowElem)
-					for (auto colElem = 0; colElem < m_grid.GridBlockColumns(); ++colElem)
-						if (*gridBlock++ & GRID_SOLID_TILE) 
-						{
-							auto x = sx + m_grid.MulGridElementWidth(colElem);
-							auto y = sy + m_grid.MulGridElementHeight(rowElem);
-							auto w = m_grid.Config().gridElementWidth - 1;
-							auto h = m_grid.Config().gridElementHeight - 1;
-							display_f(dest, x, y, w, h);
-						}
-			}
-	}
-
 	TileLayer::~TileLayer()
 	{
 		if (m_tileset)
@@ -177,11 +153,6 @@ namespace scene
 		return m_config.viewWindow.h;
 	}
 
-	GridMap& TileLayer::GetGrid(void)
-	{
-		return m_grid;
-	}
-
 	unsigned TileLayer::GetTileWidth(void) 
 	{
 		return DivTileWidth(m_config.viewWindow.w);
@@ -232,5 +203,44 @@ namespace scene
 	bool TileLayer::CanScrollVert(float dy) const
 	{
 		return (m_config.viewWindow.y >= -dy) && (m_config.viewWindow.y + m_config.viewWindow.h + dy) <= (m_config.totalRows * m_config.tileHeight);
+	}
+
+	bool TileLayer::LoadFromCSV(const std::string& context)
+	{
+		std::istringstream stream(context);
+		std::string line;
+		Dim row = 0;
+
+		while (std::getline(stream, line) && row < m_config.totalRows)
+		{
+			if (line.empty())
+				continue;
+
+			std::istringstream lineStream(line);
+			std::string cell;
+			Dim col = 0;
+
+			while (std::getline(lineStream, cell, ',') && col < m_config.totalCols)
+			{
+				int value = std::stoi(cell);
+
+				if (value = -1)
+					SetTile(col, row, MakeIndex(UINT16_MAX, UINT16_MAX));
+				else
+					SetTile(col, row, MakeIndex(MulTileWidth(value), MulTileHeight(value)));
+				
+				++col;
+			}
+
+			if (col != m_config.totalCols)
+				return false; // Column count mismatch
+
+			++row;
+		}
+
+		if (row != m_config.totalRows)
+			return false; // Row count mismatch
+
+		return true;
 	}
 }

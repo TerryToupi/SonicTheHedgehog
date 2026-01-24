@@ -7,7 +7,8 @@ namespace core
 	class Input
 	{
 	public:
-		static void Update();
+		static void UpdateInputEvents();
+		
 		static bool IsKeyPressed(io::Key key);
 	};
 }
