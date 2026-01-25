@@ -16,7 +16,7 @@ namespace scene
 		MotionQuantizer& SetMover(const Mover& f);
 		MotionQuantizer& SetUsed(bool v);
 		
-		void Move(const Rect& r, int* dx, int* dy);
+		void Move(Rect& r, int* dx, int* dy);
 
 		MotionQuantizer(void) = default;
 		MotionQuantizer(const MotionQuantizer&) = default;

@@ -13,14 +13,14 @@ namespace anim
 		{
 			m_ElapsedTime = currTime - m_LastTime;
 			m_LastTime = currTime;
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 		}
 		else
 			while (currTime > m_LastTime && (currTime - m_LastTime) >= m_Anim->GetDelay())
 			{
 
 				m_LastTime += m_Anim->GetDelay();
-				NotifyAction(*m_Anim);
+				NotifyAction(m_Anim);
 
 				if (!m_Anim->IsForever() && ++m_CurrRep == m_Anim->GetReps())
 				{

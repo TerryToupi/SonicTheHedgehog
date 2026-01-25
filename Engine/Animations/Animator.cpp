@@ -57,7 +57,7 @@ namespace anim
 			(m_OnStart)(this);
 	}
 
-	void Animator::NotifyAction(const Animation& anim)
+	void Animator::NotifyAction(Animation* anim)
 	{
 		if (m_OnAction)
 			(m_OnAction)(this, anim);

@@ -12,7 +12,7 @@ namespace anim
 		while (currtime > m_LastTime && (currtime - m_LastTime) >= m_Anim->GetScroll().at(m_CurrScroll).delay)
 		{
 			m_LastTime += m_Anim->GetScroll().at(m_CurrScroll).delay;
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 			++m_CurrScroll;
 			if (++m_CurrRep == m_Anim->GetScroll().size())
 			{

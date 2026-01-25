@@ -27,7 +27,7 @@ namespace scene
 		m_IsFalling = false;
 	}
 
-	void GravityHandler::Check(const Rect& r)
+	void GravityHandler::Check(Rect& r)
 	{
 		if (m_GravityAddicted)
 		{

@@ -12,7 +12,7 @@ namespace anim
 		while (currTime > m_LastTime && (currTime - m_LastTime) >= m_Anim->GetPath().at(m_CurrPath).delay)
 		{
 			m_LastTime += m_Anim->GetPath().at(m_CurrPath).delay;
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 			++m_CurrPath;
 			if (++m_CurrRep == m_Anim->GetPath().size())
 			{

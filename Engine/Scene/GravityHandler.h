@@ -20,7 +20,7 @@ namespace scene
 		void SetGravityAddected(bool v);
 
 		void Reset(void);
-		void Check(const Rect& r);
+		void Check(Rect& r);
 
 	protected:
 		bool m_GravityAddicted = false;
