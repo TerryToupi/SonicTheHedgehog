@@ -9,7 +9,7 @@ namespace scene
 	class GravityHandler
 	{
 	public:
-		using OnSolidGroundPred = std::function<bool(const Rect&)>;
+		using OnSolidGroundPred = std::function<bool(Rect&)>;
 		using OnStartFalling = std::function<void(void)>;
 		using OnStopFalling = std::function<void(void)>;
 

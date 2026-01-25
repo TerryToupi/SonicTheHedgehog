@@ -3,6 +3,11 @@
 
 namespace anim
 {
+	FrameRangeAnimator::FrameRangeAnimator(void)
+		:	Animator()
+	{
+	}
+
 	void FrameRangeAnimator::Progress(TimeStamp currTime)
 	{
 		while (currTime > m_LastTime && (currTime - m_LastTime ) >= m_Anim->GetDelay())
@@ -17,7 +22,7 @@ namespace anim
 				++m_CurrFrame;
 
 			m_LastTime += m_Anim->GetDelay();
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 
 			if (m_CurrFrame == m_Anim->GetEndFrame() && !m_Anim->IsForever() && ++m_CurrRep == m_Anim->GetReps())
 			{

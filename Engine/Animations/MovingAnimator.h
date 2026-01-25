@@ -15,7 +15,7 @@ namespace anim
 
 		void Start(MovingAnimation* a, TimeStamp t);
 
-		MovingAnimator(void) = default;
+		MovingAnimator(void);
 
 	protected:
 		MovingAnimation* m_Anim = nullptr;

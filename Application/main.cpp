@@ -484,7 +484,7 @@ int main(void)
 
 	auto h5 = core::EventRegistry::Subscribe(EventType::KEY_EVENT,
 		[&sfx](io::Key key) {
-			if (key == io::Key::A)
+			if (key == io::Key::P)
 			{
 				sound::PlaySFX(sfx);
 			}

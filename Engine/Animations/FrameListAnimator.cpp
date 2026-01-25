@@ -3,6 +3,11 @@
 
 namespace anim
 {
+	FrameListAnimator::FrameListAnimator(void)
+		:	Animator()
+	{
+	}
+
 	void FrameListAnimator::Progress(TimeStamp currtime)
 	{
 		while (currtime > m_LastTime && (currtime - m_LastTime) >= m_Anim->GetDelay())
@@ -17,7 +22,7 @@ namespace anim
 				m_CurrFrame = m_Anim->GetFrames().at(++m_FrameIndex);
 
 			m_LastTime += m_Anim->GetDelay();
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 
 			if (m_CurrFrame == m_Anim->GetFrames().back())
 			{

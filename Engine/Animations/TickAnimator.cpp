@@ -2,6 +2,11 @@
 
 namespace anim
 {
+	TickAnimator::TickAnimator(void)
+		:	Animator()
+	{
+	}
+
 	void TickAnimator::Progress(TimeStamp currTime)
 	{
 		if (!m_Anim->IsDiscrete())

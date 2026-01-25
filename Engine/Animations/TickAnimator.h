@@ -18,7 +18,7 @@ namespace anim
 
 		void Start(TickAnimation* a, TimeStamp t);
 
-		TickAnimator(void) = default;
+		TickAnimator(void);
 
 	protected:
 		TickAnimation* m_Anim = nullptr;

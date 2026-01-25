@@ -15,7 +15,7 @@ namespace anim
 
 		void Start(ScrollAnimation* a, Time t);
 
-		ScrollAnimator() = default;
+		ScrollAnimator();
 
 	protected:
 		ScrollAnimation* m_Anim = nullptr;

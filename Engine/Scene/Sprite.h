@@ -22,7 +22,7 @@ namespace scene
 	class Sprite : public LatelyDestroyable
 	{
 	public:
-		using Mover = std::function<void(const Rect& r, int* dx, int* dy)>;
+		using Mover = std::function<void(Rect& r, int* dx, int* dy)>;
 
 	public:
 		void SetMover(const Mover& f);

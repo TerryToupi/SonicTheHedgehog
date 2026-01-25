@@ -16,7 +16,7 @@ namespace anim
 
 		void Start(FlashAnimation* a, TimeStamp t);
 
-		FlashShowAnimator() = default;
+		FlashShowAnimator();
 
 	private:
 		FlashAnimation* m_Anim = nullptr;
@@ -34,7 +34,7 @@ namespace anim
 
 		void Start(FlashAnimation* a, TimeStamp t);
 
-		FlashHideAnimator() = default;
+		FlashHideAnimator();
 
 	private:
 		FlashAnimation* m_Anim = nullptr;

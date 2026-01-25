@@ -23,7 +23,7 @@ namespace anim
 	public:
 		using OnFinish = std::function<void(Animator*)>;
 		using OnStart = std::function<void(Animator*)>;
-		using OnAction = std::function<void(Animator*, const Animation&)>;
+		using OnAction = std::function<void(Animator*, Animation*)>;
 		
 	public:
 		void Stop(void);
@@ -44,7 +44,7 @@ namespace anim
 	protected:
 		void NotifyStopped(void);
 		void NotifyStarted(void);
-		void NotifyAction(const Animation&);
+		void NotifyAction(Animation*);
 		void Finish(bool isForced = false);
 
 	protected:

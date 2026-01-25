@@ -16,7 +16,7 @@ namespace anim
 
 		void Start(FrameListAnimation* a, TimeStamp t, int _currFrame);
 
-		FrameListAnimator() = default;
+		FrameListAnimator();
 
 	private:
 		FrameListAnimation* m_Anim = nullptr;

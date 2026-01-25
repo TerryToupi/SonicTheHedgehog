@@ -16,7 +16,7 @@ namespace anim
 
 		void Start(MovingPathAnimation* a, TimeStamp t);
 
-		MovingPathAnimator() = default;
+		MovingPathAnimator();
 
 	private:
 		MovingPathAnimation* m_Anim = nullptr;

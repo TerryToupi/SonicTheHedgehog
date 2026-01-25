@@ -2,12 +2,17 @@
 
 namespace anim
 {
+	MovingAnimator::MovingAnimator(void)
+		:	Animator()
+	{
+	}
+
 	void MovingAnimator::Progress(TimeStamp currTime)
 	{
 		while (currTime > m_LastTime && (currTime - m_LastTime) >= m_Anim->GetDelay())
 		{
 			m_LastTime += m_Anim->GetDelay();
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 			if (!m_Anim->IsForever() && ++m_CurrRep == m_Anim->GetReps())
 			{
 				m_State = ANIMATOR_FINISHED;
@@ -23,9 +28,8 @@ namespace anim
 		auto vy = float(m_Anim->GetDy()) / float(m_Anim->GetDelay());
 		auto dt = float(currTime - m_LastTime);
 		m_LastTime = currTime;
-		NotifyAction(
-			MovingAnimation(vx * dt, vy * dt)
-		);
+		MovingAnimation anim(vx * dt, vy * dt);
+		NotifyAction(&anim);
 	}
 
 	auto MovingAnimator::GetAnim(void) const -> const MovingAnimation&

@@ -2,6 +2,11 @@
 
 namespace anim
 {
+	MovingPathAnimator::MovingPathAnimator(void)
+		:	Animator()
+	{
+	}
+
 	void MovingPathAnimator::Progress(TimeStamp currTime)
 	{
 		while (currTime > m_LastTime && (currTime - m_LastTime) >= m_Anim->GetPath().at(m_CurrPath).delay)

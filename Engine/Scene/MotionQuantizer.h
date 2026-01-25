@@ -9,7 +9,7 @@ namespace scene
 	class MotionQuantizer
 	{
 	public:
-		using Mover = std::function<void(const Rect& r, int* dx, int* dy)>;
+		using Mover = std::function<void(Rect& r, int* dx, int* dy)>;
 
 	public:
 		MotionQuantizer& SetRange(int h, int v);

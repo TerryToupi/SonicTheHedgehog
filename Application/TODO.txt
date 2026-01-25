@@ -1,0 +1,27 @@
+- Move the staring scene code inside the scenes/<make the required files for that>
+
+- Make the Tilelayer work with the engine functions (really need this but if not work we can live with the previus version of having the whole image loaded and move the camera).
+
+- if the step above worked we need to remove padding from the tiles_set and load them throught the function that i made in the TileLayer
+
+TileLayer->LoadFromCSV();
+
+- Make sprites
+	- Take notes from the Basic sprite that i have provided in the Sprites folder
+	- use animations for pretty much everything (claudios will understand i think)
+	- load amiation films with AnimationFilmHolder and use them with the sprites
+		(freestyle the loading part if you are having trouble with parsing but keep in mind
+			- we only need the films
+			- all of the films have to held in the AnimationFilmHolder)
+
+- Colisions
+	- They are simple just tell claudio to use only what we have implemented in the engine
+
+- General scriptring
+	- put enemies rings (lives for sonic i think they are)
+	- and as much gameplay as possilbe (freestyle is very accepted here)
+
+- finish background
+	- seriously it looks ugly without it
+
+call me if you have any questions

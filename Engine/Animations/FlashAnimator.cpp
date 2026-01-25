@@ -2,13 +2,22 @@
 
 namespace anim
 {
+	FlashHideAnimator::FlashHideAnimator(void)
+		:	Animator()
+	{
+	}
+
+	FlashShowAnimator::FlashShowAnimator(void)
+		:	Animator()
+	{
+	}
 
 	void FlashShowAnimator::Progress(TimeStamp currtime)
 	{
 		while (currtime > m_LastTime && (currtime - m_LastTime) >= m_Anim->GetShowDelay())
 		{
 			m_LastTime += m_Anim->GetShowDelay();
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 			if (++m_CurrRep == m_Anim->GetReps())
 			{
 				m_State = ANIMATOR_FINISHED;
@@ -47,7 +56,7 @@ namespace anim
 		while (currtime > m_LastTime && (currtime - m_LastTime) >= m_Anim->GetHideDelay())
 		{
 			m_LastTime += m_Anim->GetHideDelay();
-			NotifyAction(*m_Anim);
+			NotifyAction(m_Anim);
 			if (++m_CurrRep == m_Anim->GetReps())
 			{
 				m_State = ANIMATOR_FINISHED;

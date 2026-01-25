@@ -20,7 +20,7 @@ namespace anim
 
 		void Start(FrameRangeAnimation* a, TimeStamp t);
 
-		FrameRangeAnimator(void) = default;
+		FrameRangeAnimator(void);
 
 	protected:
 		FrameRangeAnimation* m_Anim = nullptr;

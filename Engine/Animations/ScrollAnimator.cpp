@@ -2,6 +2,11 @@
 
 namespace anim
 {
+	ScrollAnimator::ScrollAnimator(void)
+		:	Animator()
+	{
+	}
+
 	void ScrollAnimator::Progress(Time currtime)
 	{
 		while (currtime > m_LastTime && (currtime - m_LastTime) >= m_Anim->GetScroll().at(m_CurrScroll).delay)

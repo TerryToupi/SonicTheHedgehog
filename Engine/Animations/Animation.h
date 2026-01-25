@@ -1,10 +1,14 @@
 #pragma once
 
+#include "Core/LatelyDestroyable.h"
+
 #include <string>
 
 namespace anim
 {
-	class Animation
+	using namespace core;
+
+	class Animation : public LatelyDestroyable
 	{
 	public:
 		const std::string& GetID();
