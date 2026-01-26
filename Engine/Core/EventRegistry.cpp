@@ -76,6 +76,21 @@ namespace core
 		s_mouseButtonEvents.Emit(button);
 	}
 
+	EventHandle& EventHandle::operator=(EventHandle&& other) noexcept
+	{
+		if (this != &other)
+		{
+			// Unsubscribe current subscription if valid
+			if (type != EventType::UNKNOWN_EVENT)
+				EventRegistry::Unsubscribe(type, id);
+
+			type = other.type;
+			id = other.id;
+			other.type = EventType::UNKNOWN_EVENT;  // Prevent source from unsubscribing
+		}
+		return *this;
+	}
+
 	EventHandle::~EventHandle()
 	{
 		if (type !=  EventType::UNKNOWN_EVENT)

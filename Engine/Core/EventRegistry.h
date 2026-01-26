@@ -52,6 +52,25 @@ namespace core
 		EventType type = EventType::UNKNOWN_EVENT;
 		int id = 0;
 
+		EventHandle() = default;
+
+		// Constructor for initialization
+		EventHandle(EventType t, int i) : type(t), id(i) {}
+
+		// Move constructor - transfers ownership
+		EventHandle(EventHandle&& other) noexcept
+			: type(other.type), id(other.id)
+		{
+			other.type = EventType::UNKNOWN_EVENT;  // Prevent source from unsubscribing
+		}
+
+		// Move assignment - defined in cpp to avoid forward declaration issues
+		EventHandle& operator=(EventHandle&& other) noexcept;
+
+		// Delete copy operations to prevent double-unsubscribe
+		EventHandle(const EventHandle&) = delete;
+		EventHandle& operator=(const EventHandle&) = delete;
+
 		~EventHandle();
 	};
 

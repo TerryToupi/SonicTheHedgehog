@@ -31,6 +31,18 @@ namespace core
 		}
 	}
 
+	void Input::FlushEvents()
+	{
+		// Drain all pending events without processing them
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			// Only process quit events to allow closing during transitions
+			if (event.type == SDL_EVENT_QUIT)
+				EventRegistry::EmitCloseEvents();
+		}
+	}
+
 	bool Input::IsKeyPressed(io::Key key)
 	{
 		const bool* keystate = SDL_GetKeyboardState(nullptr);

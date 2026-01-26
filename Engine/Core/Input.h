@@ -8,7 +8,8 @@ namespace core
 	{
 	public:
 		static void UpdateInputEvents();
-		
+		static void FlushEvents();  // Clear pending events (use between scene transitions)
+
 		static bool IsKeyPressed(io::Key key);
 	};
 }
