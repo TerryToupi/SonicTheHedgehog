@@ -32,6 +32,9 @@ namespace gfx
 	Color   GetPixel(PixelMemory mem);
 	void	PutPixel(Bitmap bmp, Dim x, Dim y, Color c);
 
+	// Makes all pixels matching the RGB color transparent (alpha = 0)
+	void	BitmapSetColorKey(Bitmap bmp, RGBValue r, RGBValue g, RGBValue b);
+
 	void BitmapBlit(
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Point& to

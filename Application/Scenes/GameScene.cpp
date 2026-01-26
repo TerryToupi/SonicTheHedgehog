@@ -2,6 +2,10 @@
 #include "Scenes/SceneManager.h"
 #include "Rendering/Renderer.h"
 #include "Core/Input.h"
+#include "Core/SystemClock.h"
+#include "Core/LatelyDestroyable.h"
+#include "Sprites/Ring.h"
+#include "Animations/AnimatorManager.h"
 
 #include <string>
 #include <fstream>
@@ -47,6 +51,28 @@ void GameScene::Load()
         m_Grid.LoadFromCSV(buffer.str());
     }
 
+    // Setup clipper for sprite rendering
+    int vpW = SceneManager::Get().GetViewportWidth();
+    int vpH = SceneManager::Get().GetViewportHeight();
+    m_Clipper.SetView([this, vpW, vpH]() -> const Rect& {
+        static Rect viewRect;
+        viewRect = { m_CameraX, m_CameraY, vpW, vpH };
+        return viewRect;
+    });
+
+    // Create test rings (positioned in the visible area)
+    // Camera starts at y=1056, viewport height=224, so visible y range is 1056-1280
+    m_Rings.push_back(new Ring(100, 1150));
+    m_Rings.push_back(new Ring(120, 1150));
+    m_Rings.push_back(new Ring(140, 1150));
+
+    // Start all ring animations
+    core::SystemClock::Get().SetCurrTime();
+    for (auto* ring : m_Rings)
+    {
+        ring->StartAnimation();
+    }
+
     // Subscribe to events
     m_CloseHandle = core::EventRegistry::Subscribe(EventType::CLOSE_EVENT,
         [this]() { HandleCloseEvent(); });
@@ -57,11 +83,25 @@ void GameScene::Load()
     // Configure game loop
     m_Game.SetRenderLoop([this]() { OnRender(); });
     m_Game.SetInputLoop([this]() { OnInput(); });
+    m_Game.SetAnimationLoop([]() {
+        core::SystemClock::Get().SetCurrTime();
+        anim::AnimatorManager::Get().Progress(core::SystemClock::Get().GetCurrTime());
+    });
     m_Game.SetFinishingFunc([this]() { return !m_ShouldExit; });
 }
 
 void GameScene::Clear()
 {
+    // Destroy sprites using the engine's destruction system
+    for (auto* ring : m_Rings)
+    {
+        ring->Destroy();
+    }
+    m_Rings.clear();
+
+    // Commit destruction to actually delete the objects
+    core::DestructionManager::Get().Commit();
+
     // Explicitly reset event handles to unsubscribe before destruction
     m_CloseHandle = core::EventHandle();
     m_KeyHandle = core::EventHandle();
@@ -80,6 +120,16 @@ void GameScene::OnRender()
     if (m_LevelMap)
     {
         gfx::BitmapBlit(m_LevelMap, {m_CameraX, m_CameraY, vpW, vpH}, screen, {0, 0});
+    }
+
+    // Render rings (visibility is managed by the ring's animation callbacks)
+    Rect viewArea = { 0, 0, vpW, vpH };  // Screen destination, not world coords
+    for (auto* ring : m_Rings)
+    {
+        if (ring->IsVisible())
+        {
+            ring->Display(screen, viewArea, m_Clipper);
+        }
     }
 
     // Draw grid overlay if enabled (optimized with batch Lock/Unlock)
@@ -180,6 +230,18 @@ void GameScene::HandleKeyEvent(io::Key key)
     if (key == io::Key::G)
     {
         m_ShowGrid = !m_ShowGrid;
+    }
+    else if (key == io::Key::C)
+    {
+        // Test: Collect the first uncollected ring
+        for (auto* ring : m_Rings)
+        {
+            if (!ring->IsCollected())
+            {
+                ring->OnCollected();
+                break;
+            }
+        }
     }
     else if (key == io::Key::Escape)
     {

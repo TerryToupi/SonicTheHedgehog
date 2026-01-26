@@ -3,7 +3,12 @@
 #include "Core/Context.h"
 #include "Core/EventRegistry.h"
 #include "Rendering/Bitmap.h"
+#include "Rendering/Clipper.h"
 #include "Scene/GridLayer.h"
+
+#include "Sprites/Ring.h"
+
+#include <vector>
 
 class GameScene : public core::Context
 {
@@ -37,9 +42,13 @@ private:
     bool m_ShowGrid = false;
     bool m_ShouldExit = false;
 
+    // Sprites
+    std::vector<Ring*> m_Rings;
+    gfx::Clipper m_Clipper;
+
     // Level constants
     static constexpr int LEVEL_WIDTH = 10240;
     static constexpr int LEVEL_HEIGHT = 1536;
-    static constexpr int SCROLL_SPEED = 1;
+    static constexpr int SCROLL_SPEED = 4;
     static constexpr int GRID_Y_OFFSET = 256;
 };

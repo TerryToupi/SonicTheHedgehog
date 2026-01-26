@@ -367,7 +367,7 @@ namespace gfx
 	}
 
 	void PutPixel(Bitmap bmp, Dim x, Dim y, Color c)
-	{ 
+	{
 		ASSERT(bmp, "Failed. Bitmap was nullptr!");
 
 		if (!BitmapLock(bmp))
@@ -377,6 +377,34 @@ namespace gfx
 		int pitch = BitmapGetLineOffset(bmp);
 
 		*(Color*)(base + y * pitch + x * sizeof(Color)) = c;
+
+		BitmapUnlock(bmp);
+	}
+
+	void BitmapSetColorKey(Bitmap bmp, RGBValue r, RGBValue g, RGBValue b)
+	{
+		ASSERT(bmp, "Failed. Bitmap was nullptr!");
+
+		if (!BitmapLock(bmp))
+			return;
+
+		uint8_t* base = BitmapGetMemory(bmp);
+		int pitch = BitmapGetLineOffset(bmp);
+		int w = (int)BitmapGetWidth(bmp);
+		int h = (int)BitmapGetHeight(bmp);
+
+		Color keyColor = MakeColor(r, g, b, 255);
+		Color transparent = MakeColor(r, g, b, 0);
+
+		for (int y = 0; y < h; ++y)
+		{
+			Color* row = reinterpret_cast<Color*>(base + y * pitch);
+			for (int x = 0; x < w; ++x)
+			{
+				if (row[x] == keyColor)
+					row[x] = transparent;
+			}
+		}
 
 		BitmapUnlock(bmp);
 	}

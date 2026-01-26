@@ -12,7 +12,7 @@ namespace scene
 
 	const Rect Sprite::GetBox(void) const
 	{
-		return { m_X, m_Y, m_FrameBox.w, m_FrameBox.y };
+		return { m_X, m_Y, m_FrameBox.w, m_FrameBox.h };
 	}
 
 	GravityHandler& Sprite::GetGravityHandler(void)
@@ -135,11 +135,15 @@ namespace scene
 				clippedBox.h
 			};
 
+			// Apply frame offset for centering (e.g., thin frames in animation)
+			const Point& offset = m_CurrFilm->GetFrameOffset(m_FrameNo);
+			Point adjustedPos = { dpyPos.x + offset.x, dpyPos.y + offset.y };
+
 			BitmapBlit(
 				m_CurrFilm->GetBitmap(),
 				clippedFrame,
 				dest,
-				dpyPos
+				adjustedPos
 			);
 		}
 	}

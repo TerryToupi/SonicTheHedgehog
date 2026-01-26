@@ -23,7 +23,13 @@ namespace anim
 				return;
 			pos += i;
 			ASSERT(!GetFilm(id), "Failed. Film already inserted in animation film holder!");
-			m_Films[id] = new AnimationFilm(m_Bitmaps.Load(path), rects, id);
+
+			// Convert Rects to FrameData (no offset for legacy parsers)
+			std::vector<AnimationFilm::FrameData> frames;
+			for (const auto& r : rects)
+				frames.push_back({ r, {0, 0} });
+
+			m_Films[id] = new AnimationFilm(m_Bitmaps.Load(path), frames, id);
 		}
 	}
 
@@ -36,7 +42,15 @@ namespace anim
 		for (auto& entry : output)
 		{
 			ASSERT(!GetFilm(entry.id), "Failed. Film already inserted in animation film holder!");
-			m_Films[entry.id] = new AnimationFilm(m_Bitmaps.Load(entry.path), entry.rects, entry.id);
+			Bitmap bmp = m_Bitmaps.Load(entry.path);
+
+			// Apply color key transparency if specified
+			if (entry.colorKey.enabled)
+			{
+				BitmapSetColorKey(bmp, entry.colorKey.r, entry.colorKey.g, entry.colorKey.b);
+			}
+
+			m_Films[entry.id] = new AnimationFilm(bmp, entry.frames, entry.id);
 		}
 	}
 

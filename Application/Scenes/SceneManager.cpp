@@ -5,6 +5,7 @@
 #include "Rendering/Renderer.h"
 #include "Sound/Sound.h"
 #include "Core/Input.h"
+#include "Utilities/FilmParser.h"
 
 SceneManager& SceneManager::Get()
 {
@@ -25,6 +26,9 @@ void SceneManager::Initialize(const char* windowTitle, int windowWidth, int wind
     gfx::Open(windowTitle, windowWidth, windowHeight);
     gfx::SetScreenBuffer(viewportWidth, viewportHeight);
     sound::Open();
+
+    // Load animation films once at startup
+    parsers::LoadFilmsFromFile(std::string(ASSETS) + "/Data/films.json");
 
     m_Initialized = true;
 }

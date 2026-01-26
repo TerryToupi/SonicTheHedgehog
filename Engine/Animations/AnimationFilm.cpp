@@ -1,11 +1,11 @@
-#include "Animations/AnimationFilm.h" 
+#include "Animations/AnimationFilm.h"
 #include "Utils/Assert.h"
 
 namespace anim
 {
 	byte AnimationFilm::GetTotalFrames(void) const
 	{
-		return (byte)m_Boxes.size();
+		return (byte)m_Frames.size();
 	}
 
 	Bitmap AnimationFilm::GetBitmap(void) const
@@ -20,13 +20,21 @@ namespace anim
 
 	const Rect& AnimationFilm::GetFrameBox(byte frameNo) const
 	{
-		ASSERT(m_Boxes.size() > frameNo, "Failed. Frame number is out of bounds!");
-		return m_Boxes[frameNo];
+		ASSERT(m_Frames.size() > frameNo, "Failed. Frame number is out of bounds!");
+		return m_Frames[frameNo].rect;
+	}
+
+	const Point& AnimationFilm::GetFrameOffset(byte frameNo) const
+	{
+		ASSERT(m_Frames.size() > frameNo, "Failed. Frame number is out of bounds!");
+		return m_Frames[frameNo].offset;
 	}
 
 	void AnimationFilm::DisplayFrame(Bitmap d, const Point& at, byte frameNo) const
 	{
-		BitmapBlit(m_Bitmap, GetFrameBox(frameNo), d, at);
+		const Point& offset = GetFrameOffset(frameNo);
+		Point adjustedPos = { at.x + offset.x, at.y + offset.y };
+		BitmapBlit(m_Bitmap, GetFrameBox(frameNo), d, adjustedPos);
 	}
 
 	void AnimationFilm::SetBitmap(Bitmap b)
@@ -35,13 +43,13 @@ namespace anim
 		m_Bitmap = b;
 	}
 
-	void AnimationFilm::Append(const Rect& r)
+	void AnimationFilm::Append(const FrameData& frame)
 	{
-		m_Boxes.push_back(r);
+		m_Frames.push_back(frame);
 	}
 
-	AnimationFilm::AnimationFilm(Bitmap b, const std::vector<Rect>& boxes, const std::string& id)
-		:	m_Bitmap(b), m_Boxes(boxes), m_ID(id)
+	AnimationFilm::AnimationFilm(Bitmap b, const std::vector<FrameData>& frames, const std::string& id)
+		:	m_Bitmap(b), m_Frames(frames), m_ID(id)
 	{
 	}
 }
