@@ -46,7 +46,12 @@ namespace scene
 	void TileLayer::Configure(TileConfig& cfg)
 	{
 		m_config = cfg;
-		m_dpyBuffer = BitmapCreate(m_config.viewWindow.w, m_config.viewWindow.h);
+		m_map.resize(m_config.totalCols * m_config.totalRows, MakeIndex(UINT16_MAX, UINT16_MAX));
+
+		// Buffer must fit all potentially visible tiles (viewport may span partial tiles)
+		Dim bufferCols = (m_config.viewWindow.w / m_config.tileWidth) + 2;
+		Dim bufferRows = (m_config.viewWindow.h / m_config.tileHeight) + 2;
+		m_dpyBuffer = BitmapCreate(bufferCols * m_config.tileWidth, bufferRows * m_config.tileHeight);
 	}
 
 	const TileConfig& TileLayer::Config(void)
@@ -56,12 +61,15 @@ namespace scene
 
 	void TileLayer::SetTile(Dim col, Dim row, Index index)
 	{
-		m_map[row * m_config.totalRows + col] = index;
+		m_map[row * m_config.totalCols + col] = index;
 	}
 
 	Index TileLayer::GetTile(Dim col, Dim row) const
 	{
-		return m_map[row * m_config.totalRows + col];
+		// Bounds check - return empty tile if out of range
+		if (col >= m_config.totalCols || row >= m_config.totalRows)
+			return MakeIndex(UINT16_MAX, UINT16_MAX);
+		return m_map[row * m_config.totalCols + col];
 	}
 
 	const Point TileLayer::Pick(Dim x, Dim y) 
@@ -73,6 +81,10 @@ namespace scene
 
 	void TileLayer::PutTile(Bitmap& dest, Dim x, Dim y, Bitmap& tiles, Index tile)
 	{
+		// Skip empty tiles
+		if (TileX(tile) == UINT16_MAX && TileY(tile) == UINT16_MAX)
+			return;
+
 		BitmapBlit(
 			m_tileset,
 			{ TileX(tile), TileY(tile), m_config.tileWidth, m_config.tileHeight },
@@ -81,17 +93,17 @@ namespace scene
 		);
 	}
 
-	Dim TileLayer::TileY(Index index)
+	/*static*/ Dim TileLayer::TileY(Index index)
 	{
 		return Dim(index >> 16);
 	}
 
-	Dim TileLayer::TileX(Index index)
+	/*static*/ Dim TileLayer::TileX(Index index)
 	{
 		return Dim(index & 0xFFFF);
 	}
 
-	Index TileLayer::MakeIndex(Dim row, Dim col)
+	/*static*/ Index TileLayer::MakeIndex(Dim row, Dim col)
 	{
 		return (Index(row) << 16) | Index(col);
 	}
@@ -119,6 +131,9 @@ namespace scene
 			m_dpyY = ModTileHeight(m_config.viewWindow.y);
 			m_dpyChanged = false;
 
+			// Clear buffer before rendering (for empty tiles)
+			BitmapClear(m_dpyBuffer, MakeColor(0, 0, 0, 255));
+
 			for (Dim row = startRow; row <= endRow; ++row)
 				for (Dim col = startCol; col <= endCol; ++col)
 					PutTile(
@@ -126,7 +141,7 @@ namespace scene
 						MulTileWidth(col - startCol),
 						MulTileHeight(row - startRow),
 						m_tileset,
-						GetTile(row, col)
+						GetTile(col, row)  // Fixed: was GetTile(row, col)
 					);
 		}
 
@@ -224,11 +239,19 @@ namespace scene
 			{
 				int value = std::stoi(cell);
 
-				if (value = -1)
+				if (value == -1)
 					SetTile(col, row, MakeIndex(UINT16_MAX, UINT16_MAX));
 				else
-					SetTile(col, row, MakeIndex(MulTileWidth(value), MulTileHeight(value)));
-				
+				{
+					// Convert linear index to tileset grid position
+					Dim tileRow = value / m_config.tilesetCols;
+					Dim tileCol = value % m_config.tilesetCols;
+					// Calculate pixel position with offset and margin
+					Dim px = m_config.tilesetOffsetX + tileCol * (m_config.tileWidth + m_config.tilesetMarginX);
+					Dim py = m_config.tilesetOffsetY + tileRow * (m_config.tileHeight + m_config.tilesetMarginY);
+					SetTile(col, row, MakeIndex(py, px));
+				}
+
 				++col;
 			}
 
@@ -242,5 +265,12 @@ namespace scene
 			return false; // Row count mismatch
 
 		return true;
+	}
+
+	void TileLayer::SetTileset(Bitmap tileset)
+	{
+		if (m_tileset)
+			BitmapDestroy(m_tileset);
+		m_tileset = tileset;
 	}
 }

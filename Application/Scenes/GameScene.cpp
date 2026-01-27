@@ -26,10 +26,36 @@ void GameScene::Initialize()
 
 void GameScene::Load()
 {
-    // Load level bitmap (using member loader so bitmaps persist)
-    m_LevelMap = m_Loader.Load(std::string(ASSETS) + "/Textures/sonic_level.png");
+    int vpW = SceneManager::Get().GetViewportWidth();
+    int vpH = SceneManager::Get().GetViewportHeight();
 
-    // m_LevelMap may be null if the file doesn't exist
+    // Load tileset and configure TileLayer
+    gfx::Bitmap tileset = m_Loader.Load(std::string(ASSETS) + "/Textures/tiles_first_map_fixed.png");
+
+    scene::TileConfig tileConfig;
+    tileConfig.totalCols = 40;
+    tileConfig.totalRows = 6;
+    tileConfig.tileWidth = 256;
+    tileConfig.tileHeight = 256;
+    tileConfig.viewWindow = {0, 0, vpW, vpH};
+    tileConfig.tilesetCols = 5;
+    tileConfig.tilesetOffsetX = 8;
+    tileConfig.tilesetOffsetY = 8;
+    tileConfig.tilesetMarginX = 8;
+    tileConfig.tilesetMarginY = 8;
+
+    m_TileLayer.Configure(tileConfig);
+    m_TileLayer.SetTileset(tileset);
+
+    // Load tile map
+    std::ifstream tileFile(std::string(ASSETS) + "/Terrain/sonic_level.csv");
+    if (tileFile.is_open())
+    {
+        std::stringstream buffer;
+        buffer << tileFile.rdbuf();
+        tileFile.close();
+        m_TileLayer.LoadFromCSV(buffer.str());
+    }
 
     // Configure and load GridMap
     scene::GridConfig config;
@@ -52,8 +78,6 @@ void GameScene::Load()
     }
 
     // Setup clipper for sprite rendering
-    int vpW = SceneManager::Get().GetViewportWidth();
-    int vpH = SceneManager::Get().GetViewportHeight();
     m_Clipper.SetView([this, vpW, vpH]() -> const Rect& {
         static Rect viewRect;
         viewRect = { m_CameraX, m_CameraY, vpW, vpH };
@@ -116,11 +140,9 @@ void GameScene::OnRender()
     // Clear the screen buffer before drawing
     gfx::BitmapClear(screen, gfx::MakeColor(0, 0, 0, 255));
 
-    // Blit only the viewport region from the level
-    if (m_LevelMap)
-    {
-        gfx::BitmapBlit(m_LevelMap, {m_CameraX, m_CameraY, vpW, vpH}, screen, {0, 0});
-    }
+    // Render tile-based level
+    m_TileLayer.SetViewWindow({m_CameraX, m_CameraY, vpW, vpH});
+    m_TileLayer.Display(screen, {0, 0});
 
     // Render rings (visibility is managed by the ring's animation callbacks)
     Rect viewArea = { 0, 0, vpW, vpH };  // Screen destination, not world coords
