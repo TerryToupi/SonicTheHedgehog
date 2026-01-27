@@ -97,6 +97,9 @@ void GameScene::Load()
         ring->StartAnimation();
     }
 
+    // Create test checkpoint (positioned near the rings)
+    m_Checkpoint = new Checkpoint(410, 1170);
+
     // Subscribe to events
     m_CloseHandle = core::EventRegistry::Subscribe(EventType::CLOSE_EVENT,
         [this]() { HandleCloseEvent(); });
@@ -122,6 +125,12 @@ void GameScene::Clear()
         ring->Destroy();
     }
     m_Rings.clear();
+
+    if (m_Checkpoint)
+    {
+        m_Checkpoint->Destroy();
+        m_Checkpoint = nullptr;
+    }
 
     // Commit destruction to actually delete the objects
     core::DestructionManager::Get().Commit();
@@ -152,6 +161,12 @@ void GameScene::OnRender()
         {
             ring->Display(screen, viewArea, m_Clipper);
         }
+    }
+
+    // Render checkpoint
+    if (m_Checkpoint && m_Checkpoint->IsVisible())
+    {
+        m_Checkpoint->Display(screen, viewArea, m_Clipper);
     }
 
     // Draw grid overlay if enabled (optimized with batch Lock/Unlock)
@@ -263,6 +278,14 @@ void GameScene::HandleKeyEvent(io::Key key)
                 ring->OnCollected();
                 break;
             }
+        }
+    }
+    else if (key == io::Key::T)
+    {
+        // Test: Trigger the checkpoint
+        if (m_Checkpoint && !m_Checkpoint->IsTriggered())
+        {
+            m_Checkpoint->OnTriggered();
         }
     }
     else if (key == io::Key::Escape)

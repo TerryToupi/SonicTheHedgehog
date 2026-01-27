@@ -123,27 +123,31 @@ namespace scene
 	{
 		ASSERT(m_CurrFilm, "FAILED. Can't display a sprite without a film!");
 
+		const Point& offset = m_CurrFilm->GetFrameOffset(m_FrameNo);
+
+		// Include frame offset in world box for proper clipping
+		Rect worldBox = {
+			m_X + offset.x,
+			m_Y + offset.y,
+			m_FrameBox.w,
+			m_FrameBox.h
+		};
+
 		Rect clippedBox;
 		Point dpyPos;
 
-		if (clipper.Clip(GetBox(), dpyArea, &dpyPos, &clippedBox))
+		if (clipper.Clip(worldBox, dpyArea, &dpyPos, &clippedBox))
 		{
-			Rect clippedFrame = {
-				m_FrameBox.x + clippedBox.x,
-				m_FrameBox.y + clippedBox.y,
-				clippedBox.w,
-				clippedBox.h
-			};
-
-			// Apply frame offset for centering (e.g., thin frames in animation)
-			const Point& offset = m_CurrFilm->GetFrameOffset(m_FrameNo);
-			Point adjustedPos = { dpyPos.x + offset.x, dpyPos.y + offset.y };
+			// Screen position formula accounts for clipper's coordinate system
+			// where clippedBox.x/y can be negative when clipped from left/top
+			int screenX = dpyPos.x + (m_X + offset.x - worldBox.x) + clippedBox.x;
+			int screenY = dpyPos.y + (m_Y + offset.y - worldBox.y) + clippedBox.y;
 
 			BitmapBlit(
 				m_CurrFilm->GetBitmap(),
-				clippedFrame,
+				m_FrameBox,
 				dest,
-				adjustedPos
+				{ screenX, screenY }
 			);
 		}
 	}
