@@ -21,6 +21,13 @@ namespace scene
 		Dim	totalRows = 0;
 		Dim	tileWidth = 16;
 		Dim	tileHeight = 16;
+
+		// Tileset layout parameters
+		Dim	tilesetCols = 1;       // Number of columns in tileset grid
+		Dim	tilesetOffsetX = 0;    // Pixel offset from left edge
+		Dim	tilesetOffsetY = 0;    // Pixel offset from top edge
+		Dim	tilesetMarginX = 0;    // Horizontal margin between tiles
+		Dim	tilesetMarginY = 0;    // Vertical margin between tiles
 	};
 
 	class TileLayer : public LatelyDestroyable
@@ -34,9 +41,9 @@ namespace scene
 		const Point Pick(Dim x, Dim y);
 
 		void		PutTile(Bitmap& dest, Dim x, Dim y, Bitmap& tiles, Index tile);
-		Dim			TileY(Index index);
-		Dim			TileX(Index index);
-		Index		MakeIndex(Dim row, Dim col);
+		static Dim			TileY(Index index);
+		static Dim			TileX(Index index);
+		static Index		MakeIndex(Dim row, Dim col);
 
 		const Rect& GetViewWindow(void);
 		void		SetViewWindow(const Rect& r);
@@ -55,6 +62,7 @@ namespace scene
 		bool CanScrollVert(float dy) const;
 
 		bool LoadFromCSV(const std::string& context);
+		void SetTileset(Bitmap tileset);
 
 		TileLayer() = default;
 		~TileLayer();

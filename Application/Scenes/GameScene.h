@@ -5,6 +5,7 @@
 #include "Rendering/Bitmap.h"
 #include "Rendering/Clipper.h"
 #include "Scene/GridLayer.h"
+#include "Scene/TileLayer.h"
 
 #include "Sprites/Ring.h"
 
@@ -31,7 +32,7 @@ private:
 
     // Resources
     gfx::BitmapLoader m_Loader;
-    gfx::Bitmap m_LevelMap = nullptr;
+    scene::TileLayer m_TileLayer;
     scene::GridMap m_Grid;
 
     // Camera state
