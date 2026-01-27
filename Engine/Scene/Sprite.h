@@ -51,7 +51,7 @@ namespace scene
 		void SetVisibility(bool v);
 		bool IsVisible(void) const;
 		
-		void Display(Bitmap dest, const Rect& dpyArea, const Clipper& clipper) const;
+		virtual void Display(Bitmap dest, const Rect& dpyArea, const Clipper& clipper) const;
 
 		void SetFilm(AnimationFilm* film);
 		auto GetFilm(void) const -> const AnimationFilm&;

@@ -7,6 +7,7 @@
 #include "Scene/GridLayer.h"
 
 #include "Sprites/Ring.h"
+#include "Sprites/Checkpoint.h"
 
 #include <vector>
 
@@ -44,6 +45,7 @@ private:
 
     // Sprites
     std::vector<Ring*> m_Rings;
+    Checkpoint* m_Checkpoint = nullptr;
     gfx::Clipper m_Clipper;
 
     // Level constants
