@@ -7,5 +7,5 @@
 scene::MotionQuantizer::Mover 
 MakeSpriteGridLayerMoverWithCamera(scene::GridMap* map, scene::Sprite* sprite, scene::TileLayer* tiles);
 
-scene::MotionQuantizer::Mover 
-MakeSpriteGridLayerMover(scene::GridMap* map, scene::Sprite* sprite);
+scene::MotionQuantizer::Mover
+MakeSpriteGridLayerMover(scene::GridMap* map, scene::Sprite* sprite, int gridYOffset = 0);

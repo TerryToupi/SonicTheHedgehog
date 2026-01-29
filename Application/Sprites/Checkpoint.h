@@ -42,5 +42,5 @@ private:
     static constexpr unsigned TRIGGERED_START_FRAME = 0;
     static constexpr unsigned TRIGGERED_END_FRAME = 15;  // Adjust based on actual frame count
     static constexpr unsigned TRIGGERED_REPS = 2;        // Spins twice
-    static constexpr unsigned TRIGGERED_DELAY_MS = 60;   // Adjust for desired speed
+    static constexpr unsigned TRIGGERED_DELAY_MS = 30;   // Adjust for desired speed
 };

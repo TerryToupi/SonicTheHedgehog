@@ -9,6 +9,10 @@
 
 #include "Sprites/Ring.h"
 #include "Sprites/Checkpoint.h"
+#include "Sprites/BasicSprite.h"
+#include "Sprites/Flower.h"
+#include "Physics/CollisionChecker.h"
+#include "Sound/Sound.h"
 
 #include <vector>
 
@@ -25,6 +29,9 @@ private:
     void HandleKeyEvent(io::Key key);
     void HandleCloseEvent();
     void ClampCamera();
+    void RegisterCollisions();
+    void OnCollisionCheckLoop();
+    void LoadFlowers();
 
 private:
     // Event handles
@@ -33,6 +40,7 @@ private:
 
     // Resources
     gfx::BitmapLoader m_Loader;
+    gfx::Bitmap m_ParallaxBackground = nullptr;
     scene::TileLayer m_TileLayer;
     scene::GridMap m_Grid;
 
@@ -40,18 +48,28 @@ private:
     int m_CameraX = 0;
     int m_CameraY = 0;
 
+    // Vertical camera smoothing (follows ground level, not Sonic's Y directly)
+    float m_CameraTargetY = 0.0f;    // Target Y based on last ground contact
+    float m_CameraSmoothY = 0.0f;    // Current smoothed Y position
+    bool m_CameraInitialized = false; // First frame initialization flag
+
     // Display state
     bool m_ShowGrid = false;
     bool m_ShouldExit = false;
 
     // Sprites
     std::vector<Ring*> m_Rings;
+    std::vector<Flower*> m_Flowers;
     Checkpoint* m_Checkpoint = nullptr;
+    Sonic* m_Sonic = nullptr;
     gfx::Clipper m_Clipper;
+
+    // Audio
+    sound::Track m_BackgroundMusic = nullptr;
 
     // Level constants
     static constexpr int LEVEL_WIDTH = 10240;
     static constexpr int LEVEL_HEIGHT = 1536;
     static constexpr int SCROLL_SPEED = 4;
-    static constexpr int GRID_Y_OFFSET = 256;
+    static constexpr int GRID_Y_OFFSET = 0;  // Full-height 1x1 grid covers entire level
 };

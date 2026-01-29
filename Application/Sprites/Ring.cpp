@@ -1,10 +1,20 @@
 #include "Sprites/Ring.h"
 #include "Animations/AnimationFilmHolder.h"
 #include "Core/SystemClock.h"
+#include "Physics/BoundingArea.h"
+
+// Static member initialization
+sound::SFX Ring::s_CollectSound = nullptr;
 
 Ring::Ring(int x, int y)
     : scene::Sprite(x, y, "Ring")
 {
+    // Load the collection sound effect once (shared across all rings)
+    if (!s_CollectSound)
+    {
+        s_CollectSound = sound::LoadSFX(ASSETS "/Sounds/coin_collect.mp3");
+    }
+
     // Get both films from the holder (must be loaded first via FilmParser)
     m_SpinFilm = const_cast<anim::AnimationFilm*>(
         anim::AnimationFilmHolder::Get().GetFilm("ring.spin")
@@ -19,6 +29,9 @@ Ring::Ring(int x, int y)
     SetFrame(0);      // Now this will actually update m_FrameBox
     SetVisibility(true);
     SetHasDirectMotion(true);  // Ring doesn't need physics movement
+
+    // Setup bounding area for collision detection (16x16 ring)
+    SetBoundingArea(new physics::BoundingBox(x, y, x + 16, y + 16));
 
     // Create the spinning animation (loops forever)
     m_SpinAnimation = new anim::FrameRangeAnimation(
@@ -130,7 +143,12 @@ void Ring::OnCollected()
         m_Animator->Start(m_CollectedAnimation, core::SystemClock::Get().GetCurrTime());
     }
 
-    // Future: Play collection sound effect
+    // Play collection sound effect
+    if (s_CollectSound)
+    {
+        sound::PlaySFX(s_CollectSound);
+    }
+
     // Future: Add to player's ring count
 }
 

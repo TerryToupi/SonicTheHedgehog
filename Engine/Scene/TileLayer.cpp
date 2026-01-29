@@ -131,8 +131,8 @@ namespace scene
 			m_dpyY = ModTileHeight(m_config.viewWindow.y);
 			m_dpyChanged = false;
 
-			// Clear buffer before rendering (for empty tiles)
-			BitmapClear(m_dpyBuffer, MakeColor(0, 0, 0, 255));
+			// Clear buffer before rendering (transparent for empty tiles)
+			BitmapClear(m_dpyBuffer, MakeColor(0, 0, 0, 0));
 
 			for (Dim row = startRow; row <= endRow; ++row)
 				for (Dim col = startCol; col <= endCol; ++col)

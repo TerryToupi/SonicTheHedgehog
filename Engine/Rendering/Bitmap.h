@@ -40,6 +40,12 @@ namespace gfx
 		Bitmap dest, const Point& to
 	);
 
+	void BitmapBlitFlipped(
+		Bitmap src, const Rect& from,
+		Bitmap dest, const Point& to,
+		bool flipHorizontal, bool flipVertical = false
+	);
+
 	void BitmapBlitScaled(
 		Bitmap src, const Rect& from,
 		Bitmap dest, const Rect& to

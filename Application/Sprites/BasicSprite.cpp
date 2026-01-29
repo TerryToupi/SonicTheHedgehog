@@ -1,79 +1,284 @@
 #include "BasicSprite.h"
 #include "Animations/FrameRangeAnimation.h"
 #include "Core/SystemClock.h"
+#include "Core/Input.h"
 #include "Utilities/MoverUtilities.h"
 
 Sonic::Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer)
-	: scene::Sprite(x, y, "Sonic")
+	: scene::Sprite(x, y, "Sonic"), m_Grid(map), m_TileLayer(layer)
 {
+	// Load films from AnimationFilmHolder
+	m_IdleFilm = const_cast<anim::AnimationFilm*>(
+		anim::AnimationFilmHolder::Get().GetFilm("sonic.idle")
+	);
+	m_WalkFilm = const_cast<anim::AnimationFilm*>(
+		anim::AnimationFilmHolder::Get().GetFilm("sonic.walk")
+	);
+	m_BallFilm = const_cast<anim::AnimationFilm*>(
+		anim::AnimationFilmHolder::Get().GetFilm("sonic.ball")
+	);
 
-	// we need to load this animations either by hand or by parsing 
-	m_movingLeft = new anim::FrameRangeAnimation("kappa", 1, 1, 1, 1, 1, 1);
-	m_movingRight = new anim::FrameRangeAnimation("kappa", 1, 1, 1, 1, 1, 1);
-	m_crouch = new anim::FrameRangeAnimation("kappa", 1, 1, 1, 1, 1, 1);
-	m_falling = new anim::FrameRangeAnimation("kappa", 1, 1, 1, 1, 1, 1);
+	// Set initial film and frame (ball since spawning in air)
+	SetFilm(m_BallFilm);
+	m_FrameNo = 255; // Force update
+	SetFrame(0);
+	SetVisibility(true);
 
-	// we might need more animators
-	// but for the perpuse of the demoe im using 1
-	m_animator = new anim::FrameRangeAnimator();
+	// Create animations
+	// FrameRangeAnimation(id, startFrame, endFrame, reps, dx, dy, delayMs)
+	m_IdleAnim = new anim::FrameRangeAnimation("sonic.idle.anim", 0, 0, 0, 0, 0, 100);
+	m_IdleAnim->SetForever();
 
-	m_BoundingArea = new physics::BoundingBox(GetBox().x, GetBox().y, GetBox().w, GetBox().h);
+	m_WalkAnim = new anim::FrameRangeAnimation("sonic.walk.anim", 0, 5, 0, 0, 0, 100);
+	m_WalkAnim->SetForever();
 
-	// Pick one mover / make a mover inspired from the utils/MoverUitilities.h funcitons
-	SetMover(MakeSpriteGridLayerMoverWithCamera(map, this, layer));
+	m_BallAnim = new anim::FrameRangeAnimation("sonic.ball.anim", 0, 4, 0, 0, 0, 100);
+	m_BallAnim->SetForever();
 
-	// settings for gravity
+	// Create animator with OnAction callback
+	m_Animator = new anim::FrameRangeAnimator();
+	m_Animator->SetOnAction(
+		[this](anim::Animator* animator, anim::Animation* animation) {
+			auto* frameAnimator = static_cast<anim::FrameRangeAnimator*>(animator);
+			this->SetFrame(static_cast<byte>(frameAnimator->GetCurrFrame()));
+		}
+	);
+
+	// Setup bounding area
+	m_BoundingArea = new physics::BoundingBox(x, y, x + 24, y + 32);
+
+	// Grid Y offset - the collision grid starts at world y=256
+	constexpr int GRID_Y_OFFSET = 0;  // Full-height 1x1 grid covers entire level
+
+	// Setup mover for collision detection (with grid offset)
+	SetMover(MakeSpriteGridLayerMover(map, this, GRID_Y_OFFSET));
+
+	// Enable motion quantizer for step-by-step collision detection
+	// Range of 2 pixels gives finer movement steps for smoother terrain following
+	m_Quantizer.SetRange(2, 2);
+
+	// Setup gravity handler
 	GetGravityHandler().SetGravityAddected(true);
 
-	GetGravityHandler().SetOnSolidGround([map](Rect& r) {
-		return map->IsOnSolidGround(r);
+	GetGravityHandler().SetOnSolidGround([this](Rect& r) {
+		// Adjust rect for grid Y offset
+		constexpr int GRID_Y_OFFSET = 0;  // Full-height 1x1 grid covers entire level
+		Rect gridRect = { r.x, r.y - GRID_Y_OFFSET, r.w, r.h };
+		// Check if bottom edge is within grid bounds (not just top edge)
+		if (gridRect.y + gridRect.h <= 0) return false;
+		return m_Grid->IsOnSolidGround(gridRect);
 	});
 
-	GetGravityHandler().SetOnStartFalling([this]() {
-		// set functionality that we need to happen wen this animations is playing
-		// this->m_animator->SetOnStart();
-		// this->m_animator->SetOnAction();
-		// this->m_animator->SetOnFinish();
+	// Note: We don't use the gravity handler callbacks for state management
+	// because the ground check flickers rapidly while walking. Instead,
+	// we rely on collision detection to stop downward movement, and check
+	// VelocityY to determine animation state.
+	// Set empty callbacks to avoid null pointer issues.
+	GetGravityHandler().SetOnStartFalling([]() {});
+	GetGravityHandler().SetOnStopFalling([]() {});
 
-		this->m_animator->Start(this->m_falling, core::SystemClock::Get().GetCurrTime());
-	});
-
-	GetGravityHandler().SetOnStopFalling([this]() {
-		this->m_animator->Stop();
-	});
-
-	// now for moving left we will update that through the animator
-	// becuase we need everything to be in sync
-
-	// TODO: MOVE THIS FUNCTION IN THE UPDATE OF THE LOGIC
-	// THIS IS FOR EXAMPLE ONLY
-
-	// Moving to one direction code (let's say left)
-	this->m_animator->SetOnStart([this](anim::Animator* anim) { 
-		auto frameRange = static_cast<anim::FrameRangeAnimator*>(anim);
-	});
-
-	this->m_animator->SetOnAction([this](anim::Animator* mator, anim::Animation* mation) {
-		auto frameMator = static_cast<anim::FrameRangeAnimator*>(mator);
-		auto frameMation = static_cast<anim::FrameRangeAnimation*>(mation);
-
-		this->Move(frameMation->GetDx(), frameMation->GetDy());
-	});
-
-	this->m_animator->SetOnFinish([this](anim::Animator* anim) { 
-		auto frameRange = static_cast<anim::FrameRangeAnimator*>(anim);
-	});
-	this->m_animator->Start(this->m_movingLeft, core::SystemClock::Get().GetCurrTime());
-	// --------------------------------------------
-
-	// duplicate the above to simulate the motion in every direction
+	// Start ball animation (since spawning in air)
+	m_Animator->Start(m_BallAnim, core::SystemClock::Get().GetCurrTime());
 }
 
 Sonic::~Sonic()
 {
-	m_movingLeft->Destroy();
-	m_movingRight->Destroy();
-	m_crouch->Destroy();
+	// Stop animator before destroying to avoid assertion failure
+	if (m_Animator) m_Animator->Stop();
 
-	m_animator->Destroy();
+	if (m_IdleAnim) m_IdleAnim->Destroy();
+	if (m_WalkAnim) m_WalkAnim->Destroy();
+	if (m_BallAnim) m_BallAnim->Destroy();
+	if (m_Animator) m_Animator->Destroy();
+}
+
+void Sonic::Update()
+{
+	HandleInput();
+	ApplyMovement();
+	UpdateAnimationState();
+	UpdateBoundingArea();
+}
+
+void Sonic::UpdateBoundingArea()
+{
+	auto* box = static_cast<physics::BoundingBox*>(m_BoundingArea);
+	box->x1 = m_X;
+	box->y1 = m_Y;
+	box->x2 = m_X + 24;
+	box->y2 = m_Y + 32;
+}
+
+void Sonic::HandleInput()
+{
+	int targetVX = 0;
+
+	// Horizontal movement
+	if (core::Input::IsKeyPressed(io::Key::Left) ||
+		core::Input::IsKeyPressed(io::Key::A))
+	{
+		targetVX = -WALK_SPEED;
+		m_Direction = Direction::LEFT;
+		SetFlipHorizontal(true);
+	}
+	else if (core::Input::IsKeyPressed(io::Key::Right) ||
+			 core::Input::IsKeyPressed(io::Key::D))
+	{
+		targetVX = WALK_SPEED;
+		m_Direction = Direction::RIGHT;
+		SetFlipHorizontal(false);
+	}
+
+	// Jump
+	if ((core::Input::IsKeyPressed(io::Key::Space) ||
+		 core::Input::IsKeyPressed(io::Key::W)) && m_OnGround && !m_JumpHeld)
+	{
+		m_JumpHeld = true;
+		m_VelocityY = JUMP_VELOCITY;
+		m_OnGround = false;
+		SetState(State::BALL);
+	}
+
+	// Reset jump hold when key released
+	if (!core::Input::IsKeyPressed(io::Key::Space) &&
+		!core::Input::IsKeyPressed(io::Key::W))
+	{
+		m_JumpHeld = false;
+	}
+
+	m_VelocityX = targetVX;
+}
+
+void Sonic::ApplyMovement()
+{
+	// Apply gravity only when not on ground
+	// This prevents fighting between gravity and ground-following
+	if (!m_OnGround)
+	{
+		// Apply gravity every other frame for smoother, less aggressive falling
+		m_GravityFrame++;
+		if (m_GravityFrame >= 2)
+		{
+			m_GravityFrame = 0;
+			m_VelocityY += GRAVITY;
+			if (m_VelocityY > MAX_FALL_SPEED)
+				m_VelocityY = MAX_FALL_SPEED;
+		}
+	}
+	else
+	{
+		m_GravityFrame = 0;  // Reset when on ground
+	}
+
+	// Apply movement (collision and ground-following handled by mover callback)
+	if (m_VelocityX != 0 || m_VelocityY != 0)
+	{
+		Move(m_VelocityX, m_VelocityY);
+	}
+
+	// Check ground contact after movement using the gravity handler's ground check
+	constexpr int GRID_Y_OFFSET = 0;  // Full-height 1x1 grid covers entire level
+	Rect groundCheckRect = { m_X, m_Y - GRID_Y_OFFSET, m_FrameBox.w, m_FrameBox.h };
+
+	// Check if bottom edge is within grid bounds
+	bool wasOnGround = m_OnGround;
+	if (groundCheckRect.y + groundCheckRect.h > 0)
+	{
+		m_OnGround = m_Grid->IsOnSolidGround(groundCheckRect);
+	}
+	else
+	{
+		m_OnGround = false;
+	}
+
+	// Landing: just became grounded
+	if (m_OnGround && !wasOnGround)
+	{
+		m_VelocityY = 0;
+	}
+
+	// Walking off edge: just left ground without jumping
+	if (!m_OnGround && wasOnGround && m_VelocityY >= 0)
+	{
+		// Start falling - gravity will be applied next frame
+		m_VelocityY = 1;
+	}
+}
+
+void Sonic::UpdateAnimationState()
+{
+	// Animation state based on ground contact, not velocity
+	// This prevents flickering when walking on slopes
+	if (!m_OnGround)
+	{
+		// In the air (jumping or falling)
+		SetState(State::BALL);
+	}
+	else
+	{
+		// On ground
+		if (m_VelocityX != 0)
+		{
+			SetState(State::WALKING);
+		}
+		else
+		{
+			SetState(State::IDLE);
+		}
+	}
+}
+
+void Sonic::SetState(State newState)
+{
+	if (m_State == newState)
+		return;
+
+	m_State = newState;
+	UpdateAnimation();
+}
+
+void Sonic::UpdateAnimation()
+{
+	m_Animator->Stop();
+
+	anim::AnimationFilm* newFilm = nullptr;
+	anim::FrameRangeAnimation* newAnim = nullptr;
+
+	switch (m_State)
+	{
+		case State::IDLE:
+			newFilm = m_IdleFilm;
+			newAnim = m_IdleAnim;
+			break;
+		case State::WALKING:
+			newFilm = m_WalkFilm;
+			newAnim = m_WalkAnim;
+			break;
+		case State::BALL:
+			newFilm = m_BallFilm;
+			newAnim = m_BallAnim;
+			break;
+	}
+
+	if (newFilm && newAnim)
+	{
+		// Get current height before changing film
+		int oldHeight = m_FrameBox.h;
+
+		SetFilm(newFilm);
+		m_FrameNo = 255;
+		SetFrame(0);
+
+		// Get new height after changing film
+		int newHeight = m_FrameBox.h;
+
+		// Adjust Y position to keep bottom edge at same position
+		// This prevents clipping through ground when animation changes to taller sprite
+		if (newHeight > oldHeight && oldHeight > 0)
+		{
+			m_Y -= (newHeight - oldHeight);
+		}
+
+		m_Animator->Start(newAnim, core::SystemClock::Get().GetCurrTime());
+	}
 }

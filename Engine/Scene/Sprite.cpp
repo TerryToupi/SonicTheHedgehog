@@ -143,12 +143,25 @@ namespace scene
 			int screenX = dpyPos.x + (m_X + offset.x - worldBox.x) + clippedBox.x;
 			int screenY = dpyPos.y + (m_Y + offset.y - worldBox.y) + clippedBox.y;
 
-			BitmapBlit(
-				m_CurrFilm->GetBitmap(),
-				m_FrameBox,
-				dest,
-				{ screenX, screenY }
-			);
+			if (m_FlipHorizontal)
+			{
+				BitmapBlitFlipped(
+					m_CurrFilm->GetBitmap(),
+					m_FrameBox,
+					dest,
+					{ screenX, screenY },
+					true, false
+				);
+			}
+			else
+			{
+				BitmapBlit(
+					m_CurrFilm->GetBitmap(),
+					m_FrameBox,
+					dest,
+					{ screenX, screenY }
+				);
+			}
 		}
 	}
 

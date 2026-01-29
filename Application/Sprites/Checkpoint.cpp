@@ -2,6 +2,7 @@
 #include "Animations/AnimationFilmHolder.h"
 #include "Core/SystemClock.h"
 #include "Rendering/Bitmap.h"
+#include "Physics/BoundingArea.h"
 
 #include <algorithm>
 
@@ -28,6 +29,10 @@ Checkpoint::Checkpoint(int x, int y)
     SetFrame(0);
     SetVisibility(true);
     SetHasDirectMotion(true);  // Checkpoint doesn't need physics movement
+
+    // Setup bounding area for collision detection
+    // Covers full height: orb at y-24 to base bottom at y+48
+    SetBoundingArea(new physics::BoundingBox(x, y - 24, x + 16, y + 48));
 
     // Create the triggered animation (plays twice)
     m_TriggeredAnimation = new anim::FrameRangeAnimation(

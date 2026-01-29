@@ -50,7 +50,10 @@ namespace scene
 		auto GetTypeID(void) -> const std::string&;
 		void SetVisibility(bool v);
 		bool IsVisible(void) const;
-		
+
+		void SetFlipHorizontal(bool flip) { m_FlipHorizontal = flip; }
+		bool GetFlipHorizontal(void) const { return m_FlipHorizontal; }
+
 		virtual void Display(Bitmap dest, const Rect& dpyArea, const Clipper& clipper) const;
 
 		void SetFilm(AnimationFilm* film);
@@ -76,5 +79,6 @@ namespace scene
 		GravityHandler  m_Gravity;
 
 		bool m_DirectMotion = false;
+		bool m_FlipHorizontal = false;
 	};
 }

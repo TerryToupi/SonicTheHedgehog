@@ -4,6 +4,7 @@
 #include "Animations/AnimationFilm.h"
 #include "Animations/FrameRangeAnimation.h"
 #include "Animations/FrameRangeAnimator.h"
+#include "Sound/Sound.h"
 
 class Ring : public scene::Sprite
 {
@@ -31,6 +32,9 @@ private:
 
     bool m_Collected = false;
     bool m_CollectionFinished = false;
+
+    // Shared sound effect for all rings
+    static sound::SFX s_CollectSound;
 
     static constexpr unsigned SPIN_START_FRAME = 0;
     static constexpr unsigned SPIN_END_FRAME = 3;

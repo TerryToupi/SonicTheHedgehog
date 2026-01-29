@@ -442,6 +442,47 @@ namespace gfx
 		destData->isDirty = 1;
 	}
 
+	void BitmapBlitFlipped(Bitmap src, const Rect& from, Bitmap dest, const Point& to,
+						   bool flipH, bool flipV)
+	{
+		ASSERT(src, "Failed. Bitmap was nullptr!");
+		auto srcData = (BitmapData*)(src);
+		auto srcTexture = srcData->texture;
+
+		ASSERT(dest, "Failed. Dest bitmap was nullptr!");
+		auto destData = (BitmapData*)(dest);
+		auto destTexture = destData->texture;
+
+		SDL_FRect srcRect{ (float)from.x, (float)from.y, (float)from.w, (float)from.h };
+		SDL_FRect dstRect{ (float)to.x,   (float)to.y,   (float)from.w, (float)from.h };
+
+		SDL_FlipMode flip = SDL_FLIP_NONE;
+		if (flipH) flip = (SDL_FlipMode)(flip | SDL_FLIP_HORIZONTAL);
+		if (flipV) flip = (SDL_FlipMode)(flip | SDL_FLIP_VERTICAL);
+
+		ASSERT(SDL_SetRenderTarget(
+			g_pRenderer,
+			destTexture
+		), SDL_GetError());
+
+		ASSERT(SDL_RenderTextureRotated(
+			g_pRenderer,
+			srcTexture,
+			&srcRect,
+			&dstRect,
+			0.0,
+			nullptr,
+			flip
+		), SDL_GetError());
+
+		ASSERT(SDL_SetRenderTarget(
+			g_pRenderer,
+			nullptr
+		), SDL_GetError());
+
+		destData->isDirty = 1;
+	}
+
 	void BitmapBlitScaled(Bitmap src, const Rect& from, Bitmap dest, const Rect& to)
 	{
 		ASSERT(src, "Failed. Bitmap was nullptr!");

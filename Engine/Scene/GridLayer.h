@@ -46,6 +46,9 @@ namespace scene
 		void FilterGridMotion(Rect& r, int* dx, int* dy);
 
 		bool IsOnSolidGround(Rect& r);
+		int GetGroundSnapDistance(Rect& r);
+		int GetGroundSnapDownDistance(Rect& r);
+		int GetWallPushOutDistance(Rect& r);  // Returns + for push right, - for push left, 0 if not in wall
 
 		GridIndex* Data(void);
 		void SetGridTile(Dim col, Dim row, GridIndex index);
@@ -63,6 +66,10 @@ namespace scene
 		void ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty);
 
 		bool LoadFromCSV(const std::string& csvContent);
+
+		// RLE binary format - much faster than CSV for large grids
+		bool LoadFromRLE(const std::string& filePath);
+		bool SaveToRLE(const std::string& filePath) const;
 
 		GridMap() = default;
 		~GridMap() = default;

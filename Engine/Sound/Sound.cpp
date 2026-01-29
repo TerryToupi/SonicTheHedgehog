@@ -28,7 +28,7 @@ namespace sound
 		mixer.format = SDL_AUDIO_F32;
 
 		g_pMixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &mixer);
-		MIX_SetMasterGain(g_pMixer, specs.volume);
+		MIX_SetMixerGain(g_pMixer, specs.volume);
 	}
 
 	void Close()

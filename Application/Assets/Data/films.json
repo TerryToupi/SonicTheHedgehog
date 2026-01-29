@@ -1,6 +1,39 @@
 {
   "films": [
     {
+      "id": "sonic.idle",
+      "path": "Textures/sonic_sheet_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 27, "y": 39, "w": 32, "h": 40 }
+      ]
+    },
+    {
+      "id": "sonic.walk",
+      "path": "Textures/sonic_sheet_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 30, "y": 131, "w": 24, "h": 40 },
+        { "x": 93, "y": 129, "w": 40, "h": 40 },
+        { "x": 162, "y": 130, "w": 32, "h": 40 },
+        { "x": 233, "y": 131, "w": 40, "h": 40 },
+        { "x": 303, "y": 129, "w": 40, "h": 40 },
+        { "x": 374, "y": 130, "w": 40, "h": 40 }
+      ]
+    },
+    {
+      "id": "sonic.ball",
+      "path": "Textures/sonic_sheet_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 27, "y": 407, "w": 32, "h": 32 },
+        { "x": 97, "y": 407, "w": 32, "h": 32 },
+        { "x": 167, "y": 407, "w": 32, "h": 32 },
+        { "x": 237, "y": 407, "w": 32, "h": 32 },
+        { "x": 307, "y": 407, "w": 32, "h": 32 }
+      ]
+    },
+    {
       "id": "ring.spin",
       "path": "Textures/misc_fixed.png",
       "colorKey": { "r": 0, "g": 176, "b": 0 },
@@ -64,6 +97,34 @@
         { "x": 364, "y": 387, "w": 40, "h": 64, "ox": -8 , "oy": -16 },
         { "x": 412, "y": 387, "w": 40, "h": 64, "ox": -8 , "oy": -16 },
         { "x": 460, "y": 387, "w": 32, "h": 64, "ox": -8 , "oy": -16 }
+      ]
+    },
+    {
+      "id": "sunflower.idle",
+      "path": "Textures/tiles_first_map_fixed.png",
+      "frames": [ 
+        { "x": 1104, "y": 2648, "w": 32, "h": 32 },
+        { "x": 1144, "y": 2648, "w": 32, "h": 32 }
+      ]
+    },
+    {
+      "id": "violet.idle",
+      "path": "Textures/tiles_first_map_fixed.png",
+      "frames": [ 
+        { "x": 1104, "y": 2688, "w": 32, "h": 40 },
+        { "x": 1144, "y": 2688, "w": 32, "h": 40 },
+        { "x": 1184, "y": 2688, "w": 32, "h": 40 },
+        { "x": 1144, "y": 2688, "w": 32, "h": 40 }
+      ]
+    },
+    {
+      "id": "plum.idle",
+      "path": "Textures/tiles_first_map_fixed.png",
+      "frames": [ 
+        { "x": 1104, "y": 2736, "w": 32, "h": 40 },
+        { "x": 1144, "y": 2736, "w": 32, "h": 40 },
+        { "x": 1184, "y": 2736, "w": 32, "h": 40 },
+        { "x": 1144, "y": 2736, "w": 32, "h": 40 }
       ]
     }
   ]

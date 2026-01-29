@@ -49,4 +49,12 @@ namespace core
 		int scancode = io::IOMapper::GetScancode(key);
 		return scancode != SDL_SCANCODE_UNKNOWN && keystate[scancode];
 	}
+
+	void Input::GetMousePosition(int* x, int* y)
+	{
+		float fx, fy;
+		SDL_GetMouseState(&fx, &fy);
+		if (x) *x = static_cast<int>(fx);
+		if (y) *y = static_cast<int>(fy);
+	}
 }
