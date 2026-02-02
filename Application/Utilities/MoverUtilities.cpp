@@ -8,7 +8,8 @@ MakeSpriteGridLayerMoverWithCamera(scene::GridMap* map, scene::Sprite* sprite, s
 		int windowY = tiles->GetViewWindow().y;
 		int spriteX = sprite->GetBox().x;
 
-		map->FilterGridMotion(r, dx, dy);
+		bool skipVertical = sprite->CanPassThroughCeiling();
+		map->FilterGridMotion(r, dx, dy, skipVertical);
 		if (*dx || *dy)
 		{
 			sprite->SetHasDirectMotion(true);
@@ -33,11 +34,14 @@ MakeSpriteGridLayerMover(scene::GridMap* map, scene::Sprite* sprite, int gridYOf
 		// Save original dy to detect jumping (before collision filtering)
 		int originalDy = *dy;
 
+		// Check if sprite can pass through vertical terrain (e.g., Sonic in ball form moving up)
+		bool skipVertical = sprite->CanPassThroughCeiling();
+
 		// Do collision check if ANY part of sprite could overlap with grid
 		// gridRect.y + gridRect.h > 0 means bottom edge is at or below grid top
 		if (gridRect.y + gridRect.h > 0)
 		{
-			map->FilterGridMotion(gridRect, dx, dy);
+			map->FilterGridMotion(gridRect, dx, dy, skipVertical);
 		}
 
 		if (*dx || *dy)

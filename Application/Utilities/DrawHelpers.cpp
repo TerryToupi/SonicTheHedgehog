@@ -3,7 +3,7 @@
 
 namespace draw
 {
-    // Simple 5x7 pixel font for text (A-Z and 0-9)
+    // Simple 5x7 pixel font for text (A-Z, 0-9, colon)
     const uint8_t FONT_5X7[][7] = {
         { 0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001 },  // A
         { 0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110 },  // B
@@ -41,12 +41,14 @@ namespace draw
         { 0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000 },  // 7
         { 0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110 },  // 8
         { 0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100 },  // 9
+        { 0b00000, 0b00100, 0b00100, 0b00000, 0b00100, 0b00100, 0b00000 },  // : (colon)
     };
 
     int GetFontIndex(char c)
     {
         if (c >= 'A' && c <= 'Z') return c - 'A';
         if (c >= '0' && c <= '9') return 26 + (c - '0');
+        if (c == ':') return 36;  // Colon after digits
         return -1;  // Space or unknown
     }
 

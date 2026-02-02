@@ -5,13 +5,18 @@
 #include "Physics/BoundingArea.h"
 #include "Animations/AnimationFilmHolder.h"
 #include "Animations/FrameRangeAnimator.h"
+#include "Animations/TunnelPath.h"
+#include "Animations/TunnelPathAnimator.h"
 #include "Scene/GridLayer.h"
 #include "Scene/TileLayer.h"
+#include "Sound/Sound.h"
+
+#include <vector>
 
 class Sonic : public scene::Sprite
 {
 public:
-	enum class State { IDLE, WALKING, BALL };
+	enum class State { IDLE, WALKING, BALL, TUNNEL };
 	enum class Direction { LEFT, RIGHT };
 
 	Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer);
@@ -25,7 +30,24 @@ public:
 	int GetBottomY() const { return m_Y + 32; }  // Bottom of sprite for ground tracking
 	bool IsOnGround() const { return m_OnGround; }
 
+	// Damage handling
+	void OnHit();
+	bool IsInvincible() const { return m_InvincibilityFrames > 0; }
+	bool IsInBallState() const { return m_State == State::BALL || m_State == State::TUNNEL; }
+	void BounceOffEnemy();  // Small upward boost when killing an enemy
+
+	// Allow passing through vertical terrain when in ball form and moving upward
+	bool CanPassThroughCeiling() const override { return m_State == State::BALL && m_VelocityY < 0; }
+
+	// Tunnel path system
+	void SetTunnelPaths(const std::vector<anim::TunnelPath>* paths) { m_TunnelPaths = paths; }
+	bool IsInTunnel() const { return m_InTunnel; }
+
 private:
+	void CheckTunnelTriggers();
+	void EnterTunnel(const anim::TunnelPath* path);
+	void ExitTunnel();
+
 	void HandleInput();
 	void ApplyMovement();
 	void UpdateAnimationState();
@@ -65,4 +87,18 @@ private:
 	static constexpr int JUMP_VELOCITY = -15;
 	static constexpr int GRAVITY = 1;
 	static constexpr int MAX_FALL_SPEED = 8;
+
+	// Shared sound effects
+	static sound::SFX s_JumpSound;
+	static sound::SFX s_HitSound;
+
+	// Invincibility after being hit
+	int m_InvincibilityFrames = 0;
+	static constexpr int INVINCIBILITY_DURATION = 120;  // ~2 seconds at 60fps
+
+	// Tunnel path system
+	const std::vector<anim::TunnelPath>* m_TunnelPaths = nullptr;
+	const anim::TunnelPath* m_CurrentTunnelPath = nullptr;
+	anim::TunnelPathAnimator* m_TunnelAnimator = nullptr;
+	bool m_InTunnel = false;
 };

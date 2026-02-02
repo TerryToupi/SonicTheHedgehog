@@ -2,6 +2,7 @@
 #include "Animations/AnimationFilmHolder.h"
 #include "Core/SystemClock.h"
 #include "Physics/BoundingArea.h"
+#include "Game/GameStats.h"
 
 // Static member initialization
 sound::SFX Ring::s_CollectSound = nullptr;
@@ -149,7 +150,8 @@ void Ring::OnCollected()
         sound::PlaySFX(s_CollectSound);
     }
 
-    // Future: Add to player's ring count
+    // Add to player's ring count and score
+    GameStats::Get().AddRing();
 }
 
 bool Ring::IsCollected() const

@@ -23,4 +23,5 @@ namespace sound
 	void 	PlaySFX(SFX sfx);
 	void 	PlayTrack(Track track, int loop);
 	void 	StopTrack(Track track, int fadoutMS);
+	void 	SetTrackVolume(Track track, float volume);
 }

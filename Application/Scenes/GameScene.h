@@ -11,8 +11,11 @@
 #include "Sprites/Checkpoint.h"
 #include "Sprites/BasicSprite.h"
 #include "Sprites/Flower.h"
+#include "Sprites/Masher.h"
 #include "Physics/CollisionChecker.h"
 #include "Sound/Sound.h"
+#include "Game/HUD.h"
+#include "Animations/TunnelPath.h"
 
 #include <vector>
 
@@ -60,12 +63,19 @@ private:
     // Sprites
     std::vector<Ring*> m_Rings;
     std::vector<Flower*> m_Flowers;
+    std::vector<Masher*> m_Mashers;
     Checkpoint* m_Checkpoint = nullptr;
     Sonic* m_Sonic = nullptr;
     gfx::Clipper m_Clipper;
 
     // Audio
     sound::Track m_BackgroundMusic = nullptr;
+
+    // HUD
+    HUD m_HUD;
+
+    // Tunnel paths
+    std::vector<anim::TunnelPath> m_TunnelPaths;
 
     // Level constants
     static constexpr int LEVEL_WIDTH = 10240;
