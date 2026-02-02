@@ -3,10 +3,25 @@
 #include "Core/SystemClock.h"
 #include "Core/Input.h"
 #include "Utilities/MoverUtilities.h"
+#include "Game/GameStats.h"
+
+// Static member initialization
+sound::SFX Sonic::s_JumpSound = nullptr;
+sound::SFX Sonic::s_HitSound = nullptr;
 
 Sonic::Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer)
 	: scene::Sprite(x, y, "Sonic"), m_Grid(map), m_TileLayer(layer)
 {
+	// Load sound effects (shared across all instances)
+	if (!s_JumpSound)
+	{
+		s_JumpSound = sound::LoadSFX(ASSETS "/Sounds/sonicjump.mp3");
+	}
+	if (!s_HitSound)
+	{
+		s_HitSound = sound::LoadSFX(ASSETS "/Sounds/stormtrooper-scream.mp3");
+	}
+
 	// Load films from AnimationFilmHolder
 	m_IdleFilm = const_cast<anim::AnimationFilm*>(
 		anim::AnimationFilmHolder::Get().GetFilm("sonic.idle")
@@ -98,6 +113,51 @@ void Sonic::Update()
 	ApplyMovement();
 	UpdateAnimationState();
 	UpdateBoundingArea();
+
+	// Decrement invincibility frames
+	if (m_InvincibilityFrames > 0)
+	{
+		--m_InvincibilityFrames;
+
+		// Flicker visibility during invincibility
+		SetVisibility((m_InvincibilityFrames % 8) < 4);
+	}
+	else
+	{
+		SetVisibility(true);
+	}
+}
+
+void Sonic::OnHit()
+{
+	// Ignore if already invincible
+	if (m_InvincibilityFrames > 0)
+		return;
+
+	// Play hit sound
+	if (s_HitSound)
+	{
+		sound::PlaySFX(s_HitSound);
+	}
+
+	// Lose a life
+	GameStats::Get().LoseLife();
+
+	// Start invincibility frames
+	m_InvincibilityFrames = INVINCIBILITY_DURATION;
+
+	// Apply knockback (bounce upward and backward)
+	m_VelocityY = -8;
+	m_VelocityX = (m_Direction == Direction::RIGHT) ? -5 : 5;
+	m_OnGround = false;
+	SetState(State::BALL);
+}
+
+void Sonic::BounceOffEnemy()
+{
+	// Small upward boost when killing an enemy (only affects vertical momentum)
+	m_VelocityY = -10;
+	m_OnGround = false;
 }
 
 void Sonic::UpdateBoundingArea()
@@ -137,6 +197,10 @@ void Sonic::HandleInput()
 		m_VelocityY = JUMP_VELOCITY;
 		m_OnGround = false;
 		SetState(State::BALL);
+		if (s_JumpSound)
+		{
+			sound::PlaySFX(s_JumpSound);
+		}
 	}
 
 	// Reset jump hold when key released

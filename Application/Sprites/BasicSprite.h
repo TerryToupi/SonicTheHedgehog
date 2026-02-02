@@ -7,6 +7,7 @@
 #include "Animations/FrameRangeAnimator.h"
 #include "Scene/GridLayer.h"
 #include "Scene/TileLayer.h"
+#include "Sound/Sound.h"
 
 class Sonic : public scene::Sprite
 {
@@ -24,6 +25,12 @@ public:
 	int GetCenterY() const { return m_Y + 20; }
 	int GetBottomY() const { return m_Y + 32; }  // Bottom of sprite for ground tracking
 	bool IsOnGround() const { return m_OnGround; }
+
+	// Damage handling
+	void OnHit();
+	bool IsInvincible() const { return m_InvincibilityFrames > 0; }
+	bool IsInBallState() const { return m_State == State::BALL; }
+	void BounceOffEnemy();  // Small upward boost when killing an enemy
 
 private:
 	void HandleInput();
@@ -65,4 +72,12 @@ private:
 	static constexpr int JUMP_VELOCITY = -15;
 	static constexpr int GRAVITY = 1;
 	static constexpr int MAX_FALL_SPEED = 8;
+
+	// Shared sound effects
+	static sound::SFX s_JumpSound;
+	static sound::SFX s_HitSound;
+
+	// Invincibility after being hit
+	int m_InvincibilityFrames = 0;
+	static constexpr int INVINCIBILITY_DURATION = 120;  // ~2 seconds at 60fps
 };

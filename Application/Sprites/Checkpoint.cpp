@@ -3,12 +3,21 @@
 #include "Core/SystemClock.h"
 #include "Rendering/Bitmap.h"
 #include "Physics/BoundingArea.h"
+#include "Game/GameStats.h"
 
 #include <algorithm>
+
+// Static member initialization
+sound::SFX Checkpoint::s_CheckpointSound = nullptr;
 
 Checkpoint::Checkpoint(int x, int y)
     : scene::Sprite(x, y, "Checkpoint")
 {
+    // Load checkpoint sound effect (shared across all instances)
+    if (!s_CheckpointSound)
+    {
+        s_CheckpointSound = sound::LoadSFX(ASSETS "/Sounds/sonic-checkpoint.mp3");
+    }
     // Get films from the holder (must be loaded first via FilmParser)
     m_BaseFilm = const_cast<anim::AnimationFilm*>(
         anim::AnimationFilmHolder::Get().GetFilm("checkpoint.base")
@@ -189,7 +198,14 @@ void Checkpoint::OnTriggered()
         m_Animator->Start(m_TriggeredAnimation, core::SystemClock::Get().GetCurrTime());
     }
 
-    // Future: Play checkpoint sound effect
+    // Play checkpoint sound effect
+    if (s_CheckpointSound)
+    {
+        sound::PlaySFX(s_CheckpointSound);
+    }
+
+    // Add checkpoint bonus to score
+    GameStats::Get().AddScore(100);
 }
 
 bool Checkpoint::IsTriggered() const

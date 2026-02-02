@@ -93,4 +93,10 @@ namespace sound
 		Sint64 fadeFrames = MIX_AudioMSToFrames(data->audio, fadoutMS);
 		ASSERT(MIX_StopTrack(data->track, fadeFrames), "FAILED. SDL mixer failed to stop Track audio");
 	}
+
+	void SetTrackVolume(Track track, float volume)
+	{
+		auto data = static_cast<TrackData*>(track);
+		MIX_SetTrackGain(data->track, volume);
+	}
 }

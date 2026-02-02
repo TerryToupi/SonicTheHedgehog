@@ -4,6 +4,7 @@
 #include "Animations/AnimationFilm.h"
 #include "Animations/FrameRangeAnimation.h"
 #include "Animations/FrameRangeAnimator.h"
+#include "Sound/Sound.h"
 
 class Checkpoint : public scene::Sprite
 {
@@ -43,4 +44,7 @@ private:
     static constexpr unsigned TRIGGERED_END_FRAME = 15;  // Adjust based on actual frame count
     static constexpr unsigned TRIGGERED_REPS = 2;        // Spins twice
     static constexpr unsigned TRIGGERED_DELAY_MS = 30;   // Adjust for desired speed
+
+    // Shared sound effect
+    static sound::SFX s_CheckpointSound;
 };

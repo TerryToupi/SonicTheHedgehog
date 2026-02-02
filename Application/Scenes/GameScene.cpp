@@ -6,6 +6,7 @@
 #include "Core/LatelyDestroyable.h"
 #include "Sprites/Ring.h"
 #include "Animations/AnimatorManager.h"
+#include "Game/GameStats.h"
 
 #include <string>
 #include <fstream>
@@ -126,6 +127,30 @@ void GameScene::Load()
     // Create Sonic (positioned in visible area)
     m_Sonic = new Sonic(50, 1100, &m_Grid, &m_TileLayer);
 
+    // Create enemies - Masher at the first gap
+    // Position the masher so it jumps up from a pit area
+    m_Mashers.push_back(new Masher(1210, 1270));
+
+    Masher* masher2 = new Masher(1130, 1270);
+    masher2->SetJumpDelay(45);  // Offset by ~0.75 seconds so they're not synchronized
+    m_Mashers.push_back(masher2);
+
+    m_Mashers.push_back(new Masher(2750, 1160));
+
+    Masher* masher3 = new Masher(2670, 1160);
+    masher3->SetJumpDelay(45);  // Offset by ~0.75 seconds so they're not synchronized
+    m_Mashers.push_back(masher3);
+
+    // Start all masher animations
+    for (auto* masher : m_Mashers)
+    {
+        masher->StartAnimation();
+    }
+
+    // Initialize game stats for this level
+    GameStats::Get().Reset();
+    GameStats::Get().StartTimer();
+
     // Register collision pairs between Sonic and collectibles
     RegisterCollisions();
 
@@ -139,13 +164,16 @@ void GameScene::Load()
     // Load and play background music on infinite loop
     m_BackgroundMusic = sound::LoadTrack((std::string(ASSETS) + "/Sounds/Sonic The Hedgehog OST - Green Hill Zone.mp3").c_str());
     sound::PlayTrack(m_BackgroundMusic, -1);  // -1 for infinite looping
+    sound::SetTrackVolume(m_BackgroundMusic, 0.3f);  // Lower volume so SFX can be heard
 
     // Configure game loop
     m_Game.SetRenderLoop([this]() { OnRender(); });
     m_Game.SetInputLoop([this]() { OnInput(); });
     m_Game.SetAnimationLoop([]() {
         core::SystemClock::Get().SetCurrTime();
-        anim::AnimatorManager::Get().Progress(core::SystemClock::Get().GetCurrTime());
+        TimeStamp currTime = core::SystemClock::Get().GetCurrTime();
+        anim::AnimatorManager::Get().Progress(currTime);
+        GameStats::Get().UpdateTimer(currTime);
     });
     m_Game.SetFinishingFunc([this]() { return !m_ShouldExit; });
     m_Game.SetCollisionsCheckingLoop([this]() { OnCollisionCheckLoop(); });
@@ -167,6 +195,10 @@ void GameScene::Clear()
     {
         checker.Cancel(m_Sonic, ring);
     }
+    for (auto* masher : m_Mashers)
+    {
+        checker.Cancel(m_Sonic, masher);
+    }
     if (m_Checkpoint)
     {
         checker.Cancel(m_Sonic, m_Checkpoint);
@@ -184,6 +216,12 @@ void GameScene::Clear()
         flower->Destroy();
     }
     m_Flowers.clear();
+
+    for (auto* masher : m_Mashers)
+    {
+        masher->Destroy();
+    }
+    m_Mashers.clear();
 
     if (m_Checkpoint)
     {
@@ -221,8 +259,8 @@ void GameScene::OnRender()
         int bgW = gfx::BitmapGetWidth(m_ParallaxBackground);
         int bgH = gfx::BitmapGetHeight(m_ParallaxBackground);
 
-        // Background world position: 1.5 rows from top, 4 rows height, 0.5 rows at bottom
-        constexpr int BG_WORLD_Y = 384;       // Start at 1.5 rows (1.5 × 256)
+        // Background world position: shifted up 700px from original 1.5 rows position
+        constexpr int BG_WORLD_Y = -366;      // 384 - 750 = -366
         constexpr int BG_WORLD_HEIGHT = 1024; // 4 rows × 256 pixels
 
         // Scale background to fit the 4-row height while maintaining aspect ratio
@@ -230,13 +268,15 @@ void GameScene::OnRender()
         int scaledW = static_cast<int>(bgW * scale);
         int scaledH = BG_WORLD_HEIGHT;
 
-        // Calculate screen Y position based on camera
-        int bgScreenY = BG_WORLD_Y - m_CameraY;
+        // Calculate screen Y position based on camera with vertical parallax (20% = 1/5th)
+        // Background stays mostly fixed, moving only 20% of camera's vertical movement
+        int parallaxY = (m_CameraY * 20) / 100;
+        int bgScreenY = BG_WORLD_Y - parallaxY;
 
         // Only render if background is visible on screen
         if (bgScreenY < vpH && bgScreenY + scaledH > 0)
         {
-            // Parallax scroll at 30% of camera speed
+            // Parallax scroll at 30% of camera speed horizontally
             int parallaxX = (m_CameraX * 30) / 100;
 
             // Scale the parallax offset to match the scaled background width
@@ -288,6 +328,15 @@ void GameScene::OnRender()
     if (m_Checkpoint && m_Checkpoint->IsVisible())
     {
         m_Checkpoint->Display(screen, viewArea, m_Clipper);
+    }
+
+    // Render enemies (Mashers)
+    for (auto* masher : m_Mashers)
+    {
+        if (masher->IsVisible() && masher->IsAlive())
+        {
+            masher->Display(screen, viewArea, m_Clipper);
+        }
     }
 
     // Render Sonic
@@ -353,6 +402,9 @@ void GameScene::OnRender()
         }
     }
 
+    // Render HUD overlay (always on top, fixed screen position)
+    m_HUD.Render(screen);
+
     gfx::Flush();
 
     // Cap at ~60 FPS
@@ -362,6 +414,15 @@ void GameScene::OnRender()
 void GameScene::OnInput()
 {
     core::Input::UpdateInputEvents();
+
+    // Update enemies
+    for (auto* masher : m_Mashers)
+    {
+        if (masher->IsAlive())
+        {
+            masher->Update();
+        }
+    }
 
     // Update Sonic and make camera follow
     if (m_Sonic)
@@ -493,6 +554,31 @@ void GameScene::RegisterCollisions()
                 if (!checkpoint->IsTriggered())
                 {
                     checkpoint->OnTriggered();
+                }
+            }
+        );
+    }
+
+    // Register Sonic vs Mashers (enemies)
+    for (auto* masher : m_Mashers)
+    {
+        checker.Register(m_Sonic, masher,
+            [](scene::Sprite* sonicSprite, scene::Sprite* masherSprite) {
+                Sonic* sonic = static_cast<Sonic*>(sonicSprite);
+                Masher* masher = static_cast<Masher*>(masherSprite);
+                if (!masher->IsAlive())
+                    return;
+
+                // If Sonic is in ball state (spinning/jumping), he kills the enemy
+                if (sonic->IsInBallState())
+                {
+                    masher->Kill();
+                    sonic->BounceOffEnemy();
+                }
+                // Otherwise, Sonic takes damage (if not invincible)
+                else if (!sonic->IsInvincible())
+                {
+                    sonic->OnHit();
                 }
             }
         );
