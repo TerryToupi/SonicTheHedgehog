@@ -43,7 +43,7 @@ namespace scene
 		void Configure(GridConfig cfg);
 		const GridConfig& Config() const;
 
-		void FilterGridMotion(Rect& r, int* dx, int* dy);
+		void FilterGridMotion(Rect& r, int* dx, int* dy, bool skipVertical = false);
 
 		bool IsOnSolidGround(Rect& r);
 		int GetGroundSnapDistance(Rect& r);

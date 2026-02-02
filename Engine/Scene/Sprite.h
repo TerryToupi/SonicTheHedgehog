@@ -59,6 +59,9 @@ namespace scene
 		void SetFilm(AnimationFilm* film);
 		auto GetFilm(void) const -> const AnimationFilm&;
 
+		// Override in subclasses to allow passing through ceilings (e.g., ball form)
+		virtual bool CanPassThroughCeiling() const { return false; }
+
 		Sprite(int _x, int _y, const std::string& _typeID = "");
 
 	protected:

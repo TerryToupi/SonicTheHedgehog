@@ -15,6 +15,7 @@
 #include "Physics/CollisionChecker.h"
 #include "Sound/Sound.h"
 #include "Game/HUD.h"
+#include "Animations/TunnelPath.h"
 
 #include <vector>
 
@@ -72,6 +73,9 @@ private:
 
     // HUD
     HUD m_HUD;
+
+    // Tunnel paths
+    std::vector<anim::TunnelPath> m_TunnelPaths;
 
     // Level constants
     static constexpr int LEVEL_WIDTH = 10240;

@@ -1,5 +1,6 @@
 #include "Scenes/GameScene.h"
 #include "Scenes/SceneManager.h"
+#include "Scenes/TunnelPaths.h"
 #include "Rendering/Renderer.h"
 #include "Core/Input.h"
 #include "Core/SystemClock.h"
@@ -126,6 +127,10 @@ void GameScene::Load()
 
     // Create Sonic (positioned in visible area)
     m_Sonic = new Sonic(50, 1100, &m_Grid, &m_TileLayer);
+
+    // Initialize tunnel paths and pass to Sonic
+    m_TunnelPaths = TunnelPaths::CreateAllTunnels();
+    m_Sonic->SetTunnelPaths(&m_TunnelPaths);
 
     // Create enemies - Masher at the first gap
     // Position the masher so it jumps up from a pit area

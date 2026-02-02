@@ -28,7 +28,7 @@ namespace scene
 		return m_config;
 	}
 
-	void GridMap::FilterGridMotion(Rect& r, int* dx, int* dy)
+	void GridMap::FilterGridMotion(Rect& r, int* dx, int* dy, bool skipVertical)
 	{
 		// Process horizontal movement first
 		if (*dx < 0)
@@ -40,10 +40,14 @@ namespace scene
 		// This ensures vertical collision checks use the position after horizontal movement
 		r.x += *dx;
 
-		if (*dy < 0)
-			FilterGridMotionUp(r, dy);
-		else if (*dy > 0)
-			FilterGridMotionDown(r, dy);
+		// Skip all vertical collision when flag is set (e.g., Sonic ascending in ball form)
+		if (!skipVertical)
+		{
+			if (*dy < 0)
+				FilterGridMotionUp(r, dy);
+			else if (*dy > 0)
+				FilterGridMotionDown(r, dy);
+		}
 
 		// Restore original x (caller expects unmodified rect, will apply dx separately)
 		r.x -= *dx;
