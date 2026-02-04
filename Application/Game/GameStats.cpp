@@ -17,6 +17,13 @@ int GameStats::GetRings() const
     return m_Rings;
 }
 
+int GameStats::LoseRings(int count)
+{
+    int toLose = (count < m_Rings) ? count : m_Rings;
+    m_Rings -= toLose;
+    return toLose;
+}
+
 void GameStats::AddScore(int points)
 {
     m_Score += points;

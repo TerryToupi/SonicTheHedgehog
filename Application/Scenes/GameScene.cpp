@@ -7,7 +7,10 @@
 #include "Core/LatelyDestroyable.h"
 #include "Sprites/Ring.h"
 #include "Animations/AnimatorManager.h"
+#include "Animations/AnimationFilmHolder.h"
 #include "Game/GameStats.h"
+#include "Utilities/DrawHelpers.h"
+#include "Utilities/MenuConstants.h"
 
 #include <string>
 #include <fstream>
@@ -16,6 +19,15 @@
 #include <chrono>
 
 #include <nlohmann/json.hpp>
+#include <cmath>
+#include <random>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// Static member initialization
+sound::SFX GameScene::s_RingDropSound = nullptr;
 
 void GameScene::Initialize()
 {
@@ -104,9 +116,8 @@ void GameScene::Load()
         return viewRect;
     });
 
-    m_Rings.push_back(new Ring(100, 1150));
-    m_Rings.push_back(new Ring(120, 1150));
-    m_Rings.push_back(new Ring(140, 1150));
+    // Load rings from JSON data file
+    LoadRings();
 
     // Start all ring animations
     core::SystemClock::Get().SetCurrTime();
@@ -132,6 +143,15 @@ void GameScene::Load()
     m_TunnelPaths = TunnelPaths::CreateAllTunnels();
     m_Sonic->SetTunnelPaths(&m_TunnelPaths);
 
+    // Load ring drop sound and set up ring scatter callback
+    if (!s_RingDropSound)
+    {
+        s_RingDropSound = sound::LoadSFX(ASSETS "/Sounds/sonic-rings-drop.mp3");
+    }
+    m_Sonic->SetRingScatterCallback([this](int x, int y, int count) {
+        SpawnScatteredRings(x, y, count);
+    });
+
     // Create enemies - Masher at the first gap
     // Position the masher so it jumps up from a pit area
     m_Mashers.push_back(new Masher(1210, 1270));
@@ -151,6 +171,31 @@ void GameScene::Load()
     {
         masher->StartAnimation();
     }
+
+    // Create bridge (decorative element)
+    m_Bridge = new Bridge(1056, 1132);
+    m_Bridge->StartAnimation();
+
+    // Create bridge (decorative element)
+    m_Bridge2 = new Bridge(2592, 1019);
+    m_Bridge2->StartAnimation();
+
+    // Create the final ring at the end of the level (goal ring)
+    m_FinalRing = new FinalRing(9860, 1350);
+    m_FinalRing->StartAnimation();
+
+    // Set up callback for when the final ring collection animation finishes
+    m_FinalRing->SetOnGameEnd([this]() {
+        StartEndingSequence();
+    });
+
+    // Load ending screen films
+    m_EndingSonicFilm = const_cast<anim::AnimationFilm*>(
+        anim::AnimationFilmHolder::Get().GetFilm("ending.sonic")
+    );
+    m_EndingLogoFilm = const_cast<anim::AnimationFilm*>(
+        anim::AnimationFilmHolder::Get().GetFilm("ending.logo")
+    );
 
     // Initialize game stats for this level
     GameStats::Get().Reset();
@@ -200,6 +245,10 @@ void GameScene::Clear()
     {
         checker.Cancel(m_Sonic, ring);
     }
+    for (auto* ring : m_ScatteredRings)
+    {
+        checker.Cancel(m_Sonic, ring);
+    }
     for (auto* masher : m_Mashers)
     {
         checker.Cancel(m_Sonic, masher);
@@ -208,6 +257,10 @@ void GameScene::Clear()
     {
         checker.Cancel(m_Sonic, m_Checkpoint);
     }
+    if (m_FinalRing)
+    {
+        checker.Cancel(m_Sonic, m_FinalRing);
+    }
 
     // Destroy sprites using the engine's destruction system
     for (auto* ring : m_Rings)
@@ -215,6 +268,12 @@ void GameScene::Clear()
         ring->Destroy();
     }
     m_Rings.clear();
+
+    for (auto* ring : m_ScatteredRings)
+    {
+        ring->Destroy();
+    }
+    m_ScatteredRings.clear();
 
     for (auto* flower : m_Flowers)
     {
@@ -228,10 +287,28 @@ void GameScene::Clear()
     }
     m_Mashers.clear();
 
+    if (m_Bridge)
+    {
+        m_Bridge->Destroy();
+        m_Bridge = nullptr;
+    }
+
+      if (m_Bridge2)
+    {
+        m_Bridge2->Destroy();
+        m_Bridge2 = nullptr;
+    }
+
     if (m_Checkpoint)
     {
         m_Checkpoint->Destroy();
         m_Checkpoint = nullptr;
+    }
+
+    if (m_FinalRing)
+    {
+        m_FinalRing->Destroy();
+        m_FinalRing = nullptr;
     }
 
     if (m_Sonic)
@@ -320,8 +397,29 @@ void GameScene::OnRender()
         }
     }
 
+    // Render bridge
+    if (m_Bridge && m_Bridge->IsVisible())
+    {
+        m_Bridge->Display(screen, viewArea, m_Clipper);
+    }
+
+    // Render bridge2
+    if (m_Bridge2 && m_Bridge2->IsVisible())
+    {
+        m_Bridge2->Display(screen, viewArea, m_Clipper);
+    }
+
     // Render rings (visibility is managed by the ring's animation callbacks)
     for (auto* ring : m_Rings)
+    {
+        if (ring->IsVisible())
+        {
+            ring->Display(screen, viewArea, m_Clipper);
+        }
+    }
+
+    // Render scattered rings
+    for (auto* ring : m_ScatteredRings)
     {
         if (ring->IsVisible())
         {
@@ -333,6 +431,12 @@ void GameScene::OnRender()
     if (m_Checkpoint && m_Checkpoint->IsVisible())
     {
         m_Checkpoint->Display(screen, viewArea, m_Clipper);
+    }
+
+    // Render final ring (goal)
+    if (m_FinalRing && m_FinalRing->IsVisible())
+    {
+        m_FinalRing->Display(screen, viewArea, m_Clipper);
     }
 
     // Render enemies (Mashers)
@@ -408,7 +512,83 @@ void GameScene::OnRender()
     }
 
     // Render HUD overlay (always on top, fixed screen position)
-    m_HUD.Render(screen);
+    if (m_EndingState == EndingState::NONE || m_EndingState == EndingState::WAITING)
+    {
+        m_HUD.Render(screen);
+    }
+
+    // Render ending sequence overlay
+    if (m_EndingState != EndingState::NONE && m_FadeAlpha > 0.0f)
+    {
+        // Draw fade overlay using direct pixel manipulation
+        if (gfx::BitmapLock(screen))
+        {
+            uint8_t* base = gfx::BitmapGetMemory(screen);
+            int pitch = gfx::BitmapGetLineOffset(screen);
+            uint8_t fadeAmount = static_cast<uint8_t>(m_FadeAlpha * 255.0f);
+
+            // Get color component extraction info
+            unsigned redShift = gfx::GetRedShiftRGBA();
+            unsigned greenShift = gfx::GetGreenShiftRGBA();
+            unsigned blueShift = gfx::GetBlueShiftRGBA();
+
+            for (int y = 0; y < vpH; ++y)
+            {
+                gfx::Color* row = reinterpret_cast<gfx::Color*>(base + y * pitch);
+                for (int x = 0; x < vpW; ++x)
+                {
+                    // Extract color components
+                    uint8_t r = static_cast<uint8_t>((row[x] >> redShift) & 0xFF);
+                    uint8_t g = static_cast<uint8_t>((row[x] >> greenShift) & 0xFF);
+                    uint8_t b = static_cast<uint8_t>((row[x] >> blueShift) & 0xFF);
+
+                    // Blend towards black (0, 0, 0)
+                    r = static_cast<uint8_t>((r * (255 - fadeAmount)) / 255);
+                    g = static_cast<uint8_t>((g * (255 - fadeAmount)) / 255);
+                    b = static_cast<uint8_t>((b * (255 - fadeAmount)) / 255);
+                    row[x] = gfx::MakeColor(r, g, b, 255);
+                }
+            }
+            gfx::BitmapUnlock(screen);
+        }
+
+        // Render end screen sprites when fully faded
+        if (m_EndingState == EndingState::SHOWING_END && m_EndingSonicFilm && m_EndingLogoFilm)
+        {
+            // Get sprite dimensions
+            Rect sonicFrame = m_EndingSonicFilm->GetFrameBox(0);
+            Rect logoFrame = m_EndingLogoFilm->GetFrameBox(0);
+
+            // Center the combined image on screen
+            // Sonic on left, logo on right with some spacing
+            int totalWidth = sonicFrame.w + 20 + logoFrame.w;  // 20px spacing
+            int startX = (vpW - totalWidth) / 2;
+            int sonicY = (vpH - sonicFrame.h) / 2;
+            int logoY = (vpH - logoFrame.h) / 2 - 30;  // 50px higher than center
+
+            // Draw Sonic sprite
+            gfx::BitmapBlit(
+                m_EndingSonicFilm->GetBitmap(),
+                sonicFrame,
+                screen,
+                { startX, sonicY }
+            );
+
+            // Draw logo sprite
+            gfx::BitmapBlit(
+                m_EndingLogoFilm->GetBitmap(),
+                logoFrame,
+                screen,
+                { startX + sonicFrame.w + 20, logoY }
+            );
+        }
+    }
+
+    // Render pause menu overlay if game is paused
+    if (m_Game.IsPaused())
+    {
+        RenderPauseMenu(screen, vpW, vpH);
+    }
 
     gfx::Flush();
 
@@ -420,6 +600,25 @@ void GameScene::OnInput()
 {
     core::Input::UpdateInputEvents();
 
+    // Skip gameplay input when paused (menu input is handled via key events)
+    if (m_Game.IsPaused())
+    {
+        return;
+    }
+
+    // Handle ending sequence updates
+    if (m_EndingState != EndingState::NONE)
+    {
+        UpdateEndingSequence();
+
+        // Stop gameplay updates once the end screen is showing
+        if (m_EndingState == EndingState::SHOWING_END || m_EndingState == EndingState::DONE)
+        {
+            return;
+        }
+        // During WAITING and FADING, Sonic can still move (fall through to normal updates)
+    }
+
     // Update enemies
     for (auto* masher : m_Mashers)
     {
@@ -428,6 +627,9 @@ void GameScene::OnInput()
             masher->Update();
         }
     }
+
+    // Update scattered rings (physics and cleanup)
+    UpdateScatteredRings();
 
     // Update Sonic and make camera follow
     if (m_Sonic)
@@ -483,34 +685,63 @@ void GameScene::HandleKeyEvent(io::Key key)
 {
     if (m_ShouldExit) return;  // Already transitioning
 
+    // Handle pause menu input when paused
+    if (m_Game.IsPaused())
+    {
+        HandlePauseMenuInput(key);
+        return;
+    }
+
     if (key == io::Key::G)
     {
         m_ShowGrid = !m_ShowGrid;
     }
-    else if (key == io::Key::C)
+    else if (key == io::Key::Escape)
     {
-        // Test: Collect the first uncollected ring
-        for (auto* ring : m_Rings)
-        {
-            if (!ring->IsCollected())
-            {
-                ring->OnCollected();
-                break;
-            }
-        }
+        // Pause the game and show pause menu
+        m_PauseSelection = PauseMenuOption::CONTINUE;
+        m_Game.Pause(core::SystemClock::Get().GetCurrTime());
     }
-    else if (key == io::Key::T)
+}
+
+void GameScene::HandlePauseMenuInput(io::Key key)
+{
+    if (key == io::Key::W || key == io::Key::Up)
     {
-        // Test: Trigger the checkpoint
-        if (m_Checkpoint && !m_Checkpoint->IsTriggered())
+        // Move selection up
+        int sel = static_cast<int>(m_PauseSelection);
+        sel = (sel - 1 + PAUSE_MENU_OPTIONS) % PAUSE_MENU_OPTIONS;
+        m_PauseSelection = static_cast<PauseMenuOption>(sel);
+    }
+    else if (key == io::Key::S || key == io::Key::Down)
+    {
+        // Move selection down
+        int sel = static_cast<int>(m_PauseSelection);
+        sel = (sel + 1) % PAUSE_MENU_OPTIONS;
+        m_PauseSelection = static_cast<PauseMenuOption>(sel);
+    }
+    else if (key == io::Key::Enter || key == io::Key::Space)
+    {
+        // Select current option
+        if (m_PauseSelection == PauseMenuOption::CONTINUE)
         {
-            m_Checkpoint->OnTriggered();
+            m_Game.Resume();
+        }
+        else if (m_PauseSelection == PauseMenuOption::RESTART)
+        {
+            m_ShouldExit = true;
+            SceneManager::Get().ChangeScene(SceneType::GAME);  // Restart the game
+        }
+        else if (m_PauseSelection == PauseMenuOption::EXIT)
+        {
+            m_ShouldExit = true;
+            SceneManager::Get().ChangeScene(SceneType::MENU);
         }
     }
     else if (key == io::Key::Escape)
     {
-        m_ShouldExit = true;
-        SceneManager::Get().ChangeScene(SceneType::MENU);
+        // ESC while paused resumes the game
+        m_Game.Resume();
     }
 }
 
@@ -564,6 +795,25 @@ void GameScene::RegisterCollisions()
         );
     }
 
+    // Register Sonic vs FinalRing (goal)
+    if (m_FinalRing)
+    {
+        checker.Register(m_Sonic, m_FinalRing,
+            [this](scene::Sprite* sonic, scene::Sprite* finalRingSprite) {
+                FinalRing* finalRing = static_cast<FinalRing*>(finalRingSprite);
+                if (!finalRing->IsCollected())
+                {
+                    // Stop background music to let stage clear theme play
+                    if (m_BackgroundMusic)
+                    {
+                        sound::StopTrack(m_BackgroundMusic, 500);  // 500ms fade out
+                    }
+                    finalRing->OnCollected();
+                }
+            }
+        );
+    }
+
     // Register Sonic vs Mashers (enemies)
     for (auto* masher : m_Mashers)
     {
@@ -574,14 +824,18 @@ void GameScene::RegisterCollisions()
                 if (!masher->IsAlive())
                     return;
 
+                // When invincible, Sonic can't interact with enemies at all
+                if (sonic->IsInvincible())
+                    return;
+
                 // If Sonic is in ball state (spinning/jumping), he kills the enemy
                 if (sonic->IsInBallState())
                 {
                     masher->Kill();
                     sonic->BounceOffEnemy();
                 }
-                // Otherwise, Sonic takes damage (if not invincible)
-                else if (!sonic->IsInvincible())
+                // Otherwise, Sonic takes damage
+                else
                 {
                     sonic->OnHit();
                 }
@@ -615,6 +869,234 @@ void GameScene::LoadFlowers()
             int x = pos[0];
             int y = pos[1];
             m_Flowers.push_back(new Flower(x, y, filmId));
+        }
+    }
+}
+
+void GameScene::LoadRings()
+{
+    std::ifstream file(std::string(ASSETS) + "/Data/rings.json");
+    if (!file.is_open())
+    {
+        return;
+    }
+
+    nlohmann::json data;
+    file >> data;
+    file.close();
+
+    for (const auto& pos : data["rings"])
+    {
+        int x = pos[0];
+        int y = pos[1];
+        m_Rings.push_back(new Ring(x, y));
+    }
+}
+
+void GameScene::RenderPauseMenu(gfx::Bitmap screen, int vpW, int vpH)
+{
+    // Draw semi-transparent dark overlay
+    if (gfx::BitmapLock(screen))
+    {
+        uint8_t* base = gfx::BitmapGetMemory(screen);
+        int pitch = gfx::BitmapGetLineOffset(screen);
+        constexpr uint8_t darkenAmount = 128;  // 50% darkening
+
+        unsigned redShift = gfx::GetRedShiftRGBA();
+        unsigned greenShift = gfx::GetGreenShiftRGBA();
+        unsigned blueShift = gfx::GetBlueShiftRGBA();
+
+        for (int y = 0; y < vpH; ++y)
+        {
+            gfx::Color* row = reinterpret_cast<gfx::Color*>(base + y * pitch);
+            for (int x = 0; x < vpW; ++x)
+            {
+                uint8_t r = static_cast<uint8_t>((row[x] >> redShift) & 0xFF);
+                uint8_t g = static_cast<uint8_t>((row[x] >> greenShift) & 0xFF);
+                uint8_t b = static_cast<uint8_t>((row[x] >> blueShift) & 0xFF);
+
+                r = static_cast<uint8_t>((r * (255 - darkenAmount)) / 255);
+                g = static_cast<uint8_t>((g * (255 - darkenAmount)) / 255);
+                b = static_cast<uint8_t>((b * (255 - darkenAmount)) / 255);
+                row[x] = gfx::MakeColor(r, g, b, 255);
+            }
+        }
+        gfx::BitmapUnlock(screen);
+    }
+
+    // Menu dimensions
+    constexpr int BUTTON_WIDTH = 120;
+    constexpr int BUTTON_HEIGHT = 25;
+    constexpr int BUTTON_SPACING = 10;
+    constexpr int MENU_PADDING = 20;
+
+    int menuHeight = 3 * BUTTON_HEIGHT + 2 * BUTTON_SPACING + 2 * MENU_PADDING + 30; // +30 for title
+    int menuWidth = BUTTON_WIDTH + 2 * MENU_PADDING;
+    int menuX = (vpW - menuWidth) / 2;
+    int menuY = (vpH - menuHeight) / 2;
+
+    // Draw menu background
+    draw::FilledRect(screen, menuX, menuY, menuWidth, menuHeight, menu::COLOR_BUTTON_FACE);
+    draw::RectBorder(screen, menuX, menuY, menuWidth, menuHeight, menu::COLOR_BUTTON_DARK, 3);
+
+    // Draw "PAUSED" title
+    const char* title = "PAUSED";
+    int titleX = menuX + (menuWidth - 6 * 6 * 2) / 2;  // 6 chars * 6px * scale 2
+    int titleY = menuY + MENU_PADDING;
+    draw::Text(screen, titleX, titleY, title, menu::COLOR_TEXT, 2);
+
+    // Button positions
+    int buttonX = menuX + MENU_PADDING;
+    int button1Y = menuY + MENU_PADDING + 30;
+    int button2Y = button1Y + BUTTON_HEIGHT + BUTTON_SPACING;
+    int button3Y = button2Y + BUTTON_HEIGHT + BUTTON_SPACING;
+
+    // Draw Continue button
+    bool continueSelected = (m_PauseSelection == PauseMenuOption::CONTINUE);
+    draw::StoneButton(screen, buttonX, button1Y, BUTTON_WIDTH, BUTTON_HEIGHT, continueSelected);
+    int textX = buttonX + (BUTTON_WIDTH - 8 * 6) / 2;  // "CONTINUE" = 8 chars
+    draw::Text(screen, textX, button1Y + 8, "CONTINUE", menu::COLOR_TEXT, 1);
+
+    // Draw Restart button
+    bool restartSelected = (m_PauseSelection == PauseMenuOption::RESTART);
+    draw::StoneButton(screen, buttonX, button2Y, BUTTON_WIDTH, BUTTON_HEIGHT, restartSelected);
+    textX = buttonX + (BUTTON_WIDTH - 7 * 6) / 2;  // "RESTART" = 7 chars
+    draw::Text(screen, textX, button2Y + 8, "RESTART", menu::COLOR_TEXT, 1);
+
+    // Draw Exit button
+    bool exitSelected = (m_PauseSelection == PauseMenuOption::EXIT);
+    draw::StoneButton(screen, buttonX, button3Y, BUTTON_WIDTH, BUTTON_HEIGHT, exitSelected);
+    textX = buttonX + (BUTTON_WIDTH - 4 * 6) / 2;  // "EXIT" = 4 chars
+    draw::Text(screen, textX, button3Y + 8, "EXIT", menu::COLOR_TEXT, 1);
+
+    // Draw selection arrow
+    int arrowY = button1Y;
+    if (m_PauseSelection == PauseMenuOption::RESTART) arrowY = button2Y;
+    else if (m_PauseSelection == PauseMenuOption::EXIT) arrowY = button3Y;
+    draw::Arrow(screen, buttonX - 15, arrowY + BUTTON_HEIGHT / 2 - 4, menu::COLOR_ARROW);
+}
+
+void GameScene::StartEndingSequence()
+{
+    if (m_EndingState != EndingState::NONE)
+        return;  // Already in ending sequence
+
+    m_EndingState = EndingState::WAITING;
+    m_EndingStartTime = core::SystemClock::Get().GetCurrTime();
+    m_FadeAlpha = 0.0f;
+}
+
+void GameScene::UpdateEndingSequence()
+{
+    TimeStamp currentTime = core::SystemClock::Get().GetCurrTime();
+    TimeStamp elapsed = currentTime - m_EndingStartTime;
+
+    switch (m_EndingState)
+    {
+        case EndingState::WAITING:
+            // Wait 1 second before starting fade
+            if (elapsed >= ENDING_WAIT_MS)
+            {
+                m_EndingState = EndingState::FADING;
+                m_EndingStartTime = currentTime;
+            }
+            break;
+
+        case EndingState::FADING:
+            // Gradually increase fade alpha over ENDING_FADE_MS
+            m_FadeAlpha = static_cast<float>(elapsed) / static_cast<float>(ENDING_FADE_MS);
+            if (m_FadeAlpha >= 1.0f)
+            {
+                m_FadeAlpha = 1.0f;
+                m_EndingState = EndingState::SHOWING_END;
+                m_EndingStartTime = currentTime;
+            }
+            break;
+
+        case EndingState::SHOWING_END:
+            // Show end screen for 5 seconds
+            if (elapsed >= ENDING_DISPLAY_MS)
+            {
+                m_EndingState = EndingState::DONE;
+                m_ShouldExit = true;
+                SceneManager::Get().ChangeScene(SceneType::MENU);
+            }
+            break;
+
+        case EndingState::DONE:
+        case EndingState::NONE:
+            // Nothing to do
+            break;
+    }
+}
+
+void GameScene::SpawnScatteredRings(int x, int y, int count)
+{
+    // Play ring drop sound
+    if (count > 0 && s_RingDropSound)
+    {
+        sound::PlaySFX(s_RingDropSound);
+    }
+
+    // Cap at 32 rings for performance
+    count = (count > 32) ? 32 : count;
+
+    // Random number generator for natural scatter pattern
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> speedDist(2.5f, 5.0f);     // Random speed
+    std::uniform_real_distribution<float> angleDist(-0.6f, 0.6f);    // Random angle offset (~35 degrees each way)
+
+    for (int i = 0; i < count; ++i)
+    {
+        // Random speed and angle for natural scatter
+        float speed = speedDist(gen);
+        float angleOffset = angleDist(gen);
+        float angle = static_cast<float>(-M_PI / 2.0) + angleOffset;  // Centered on upward
+
+        // Calculate velocity with upward bias
+        float vx = speed * std::cos(angle);
+        float vy = speed * std::sin(angle) - 1.5f;  // Extra upward boost
+
+        // Create the scattered ring
+        auto* ring = new ScatteredRing(x, y, vx, vy);
+        ring->StartAnimation();
+        m_ScatteredRings.push_back(ring);
+
+        // Register collision with Sonic
+        physics::CollisionChecker::Get().Register(m_Sonic, ring,
+            [](scene::Sprite* sonicSprite, scene::Sprite* ringSprite) {
+                ScatteredRing* ring = static_cast<ScatteredRing*>(ringSprite);
+                if (ring->IsCollectable() && !ring->IsCollected())
+                {
+                    ring->OnCollected();
+                }
+            }
+        );
+    }
+}
+
+void GameScene::UpdateScatteredRings()
+{
+    // Update all scattered rings (physics)
+    for (auto* ring : m_ScatteredRings)
+    {
+        ring->Update();
+    }
+
+    // Remove expired or collected rings
+    auto it = m_ScatteredRings.begin();
+    while (it != m_ScatteredRings.end())
+    {
+        if ((*it)->IsExpired() || (*it)->IsCollectionFinished())
+        {
+            physics::CollisionChecker::Get().Cancel(m_Sonic, *it);
+            (*it)->Destroy();
+            it = m_ScatteredRings.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
 }

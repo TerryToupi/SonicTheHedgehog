@@ -9,6 +9,7 @@ public:
 
     // Ring tracking
     void AddRing();
+    int LoseRings(int count);  // Returns actual rings lost (capped at current)
     int GetRings() const;
 
     // Score

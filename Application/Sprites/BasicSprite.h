@@ -12,11 +12,12 @@
 #include "Sound/Sound.h"
 
 #include <vector>
+#include <functional>
 
 class Sonic : public scene::Sprite
 {
 public:
-	enum class State { IDLE, WALKING, BALL, TUNNEL };
+	enum class State { IDLE, WALKING, RUNNING, BALL, TUNNEL };
 	enum class Direction { LEFT, RIGHT };
 
 	Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer);
@@ -35,6 +36,10 @@ public:
 	bool IsInvincible() const { return m_InvincibilityFrames > 0; }
 	bool IsInBallState() const { return m_State == State::BALL || m_State == State::TUNNEL; }
 	void BounceOffEnemy();  // Small upward boost when killing an enemy
+
+	// Ring scatter callback (called when Sonic loses rings on hit)
+	using RingScatterCallback = std::function<void(int x, int y, int count)>;
+	void SetRingScatterCallback(RingScatterCallback callback) { m_RingScatterCallback = std::move(callback); }
 
 	// Allow passing through vertical terrain when in ball form and moving upward
 	bool CanPassThroughCeiling() const override { return m_State == State::BALL && m_VelocityY < 0; }
@@ -56,12 +61,16 @@ private:
 
 	// Films
 	anim::AnimationFilm* m_IdleFilm = nullptr;
+	anim::AnimationFilm* m_IdleLoopFilm = nullptr;
 	anim::AnimationFilm* m_WalkFilm = nullptr;
+	anim::AnimationFilm* m_RunFilm = nullptr;
 	anim::AnimationFilm* m_BallFilm = nullptr;
 
 	// Animations
 	anim::FrameRangeAnimation* m_IdleAnim = nullptr;
+	anim::FrameRangeAnimation* m_IdleLoopAnim = nullptr;
 	anim::FrameRangeAnimation* m_WalkAnim = nullptr;
+	anim::FrameRangeAnimation* m_RunAnim = nullptr;
 	anim::FrameRangeAnimation* m_BallAnim = nullptr;
 
 	// Animator
@@ -71,6 +80,16 @@ private:
 	State m_State = State::BALL;  // Start in ball state since spawning in air
 	Direction m_Direction = Direction::RIGHT;
 	bool m_OnGround = false;  // Start false so gravity check runs immediately
+
+	// Walk-to-run tracking
+	TimeStamp m_WalkStartTime = 0;
+	Direction m_WalkDirection = Direction::RIGHT;
+	static constexpr int WALK_TO_RUN_MS = 1000;  // 1 second before switching to run
+
+	// Idle loop tracking
+	TimeStamp m_IdleStartTime = 0;
+	bool m_PlayingIdleLoop = false;
+	static constexpr int IDLE_TO_LOOP_MS = 1000;  // 1 second before switching to idle loop
 
 	// Physics
 	int m_VelocityX = 0;
@@ -84,17 +103,22 @@ private:
 
 	// Constants
 	static constexpr int WALK_SPEED = 3;
-	static constexpr int JUMP_VELOCITY = -15;
+	static constexpr int RUN_SPEED = 4;  // ~1.4x walk speed
+	static constexpr int JUMP_VELOCITY = -12;
 	static constexpr int GRAVITY = 1;
 	static constexpr int MAX_FALL_SPEED = 8;
 
 	// Shared sound effects
 	static sound::SFX s_JumpSound;
 	static sound::SFX s_HitSound;
+	static sound::SFX s_TunnelSound;
 
 	// Invincibility after being hit
 	int m_InvincibilityFrames = 0;
 	static constexpr int INVINCIBILITY_DURATION = 120;  // ~2 seconds at 60fps
+
+	// Ring scatter callback
+	RingScatterCallback m_RingScatterCallback;
 
 	// Tunnel path system
 	const std::vector<anim::TunnelPath>* m_TunnelPaths = nullptr;

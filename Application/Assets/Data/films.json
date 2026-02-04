@@ -9,6 +9,15 @@
       ]
     },
     {
+      "id": "sonic.idle.loop",
+      "path": "Textures/sonic_sheet_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 253, "y": 39, "w": 32, "h": 40 },
+        { "x": 323, "y": 39, "w": 32, "h": 40 }
+      ]
+    },
+    {
       "id": "sonic.walk",
       "path": "Textures/sonic_sheet_fixed.png",
       "colorKey": { "r": 0, "g": 176, "b": 0 },
@@ -19,6 +28,17 @@
         { "x": 233, "y": 131, "w": 40, "h": 40 },
         { "x": 303, "y": 129, "w": 40, "h": 40 },
         { "x": 374, "y": 130, "w": 40, "h": 40 }
+      ]
+    },
+    {
+      "id": "sonic.run",
+      "path": "Textures/sonic_sheet_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 23, "y": 314, "w": 32, "h": 40 },
+        { "x": 93, "y": 314, "w": 32, "h": 40 },
+        { "x": 163, "y": 314, "w": 32, "h": 40 },
+        { "x": 233, "y": 314, "w": 32, "h": 40 }
       ]
     },
     {
@@ -133,6 +153,56 @@
       "frames": [
         { "x": 157, "y": 209, "w": 32, "h": 32 },
         { "x": 197, "y": 209, "w": 32, "h": 32 }
+      ]
+    },
+    {
+      "id": "final_ring.spin",
+      "path": "Textures/misc_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 8, "y": 66, "w": 64, "h": 64 },
+        { "x": 80, "y": 66, "w": 48, "h": 64, "ox": 8 },
+        { "x": 136, "y": 66, "w": 24, "h": 64, "ox": 20 },
+        { "x": 168, "y": 66, "w": 48, "h": 64, "ox": 8 }
+      ]
+    },
+    {
+      "id": "final_ring.collected",
+      "path": "Textures/misc_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 8, "y": 138, "w": 64, "h": 64 },
+        { "x": 80, "y": 138, "w": 64, "h": 64 },
+        { "x": 152, "y": 138, "w": 64, "h": 64 },
+        { "x": 224, "y": 138, "w": 64, "h": 64 },
+
+        { "x": 8, "y": 210, "w": 64, "h": 64 },
+        { "x": 80, "y": 210, "w": 64, "h": 64 },
+        { "x": 152, "y": 210, "w": 64, "h": 64 },
+        { "x": 224, "y": 210, "w": 64, "h": 64 }
+      ]
+    },
+    {
+      "id": "ending.sonic",
+      "path": "Textures/sonic_sheet_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 188, "y": 788, "w": 176, "h": 136 }
+      ]
+    },
+    {
+      "id": "ending.logo",
+      "path": "Textures/sonic_sheet_fixed.png",
+      "colorKey": { "r": 0, "g": 176, "b": 0 },
+      "frames": [
+        { "x": 384, "y": 788, "w": 96, "h": 32 }
+      ]
+    },
+    {
+      "id": "bridge.idle",
+      "path": "Textures/enemies_sheet_fixed.png",
+      "frames": [
+        { "x": 958, "y": 446, "w": 256, "h": 44 }
       ]
     }
   ]

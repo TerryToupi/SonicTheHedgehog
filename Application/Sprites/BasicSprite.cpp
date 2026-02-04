@@ -8,6 +8,7 @@
 // Static member initialization
 sound::SFX Sonic::s_JumpSound = nullptr;
 sound::SFX Sonic::s_HitSound = nullptr;
+sound::SFX Sonic::s_TunnelSound = nullptr;
 
 Sonic::Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer)
 	: scene::Sprite(x, y, "Sonic"), m_Grid(map), m_TileLayer(layer)
@@ -21,13 +22,23 @@ Sonic::Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer)
 	{
 		s_HitSound = sound::LoadSFX(ASSETS "/Sounds/stormtrooper-scream.mp3");
 	}
+	if (!s_TunnelSound)
+	{
+		s_TunnelSound = sound::LoadSFX(ASSETS "/Sounds/sonic-tunnel.mp3");
+	}
 
 	// Load films from AnimationFilmHolder
 	m_IdleFilm = const_cast<anim::AnimationFilm*>(
 		anim::AnimationFilmHolder::Get().GetFilm("sonic.idle")
 	);
+	m_IdleLoopFilm = const_cast<anim::AnimationFilm*>(
+		anim::AnimationFilmHolder::Get().GetFilm("sonic.idle.loop")
+	);
 	m_WalkFilm = const_cast<anim::AnimationFilm*>(
 		anim::AnimationFilmHolder::Get().GetFilm("sonic.walk")
+	);
+	m_RunFilm = const_cast<anim::AnimationFilm*>(
+		anim::AnimationFilmHolder::Get().GetFilm("sonic.run")
 	);
 	m_BallFilm = const_cast<anim::AnimationFilm*>(
 		anim::AnimationFilmHolder::Get().GetFilm("sonic.ball")
@@ -44,8 +55,14 @@ Sonic::Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer)
 	m_IdleAnim = new anim::FrameRangeAnimation("sonic.idle.anim", 0, 0, 0, 0, 0, 100);
 	m_IdleAnim->SetForever();
 
+	m_IdleLoopAnim = new anim::FrameRangeAnimation("sonic.idle.loop.anim", 0, 1, 0, 0, 0, 300);
+	m_IdleLoopAnim->SetForever();
+
 	m_WalkAnim = new anim::FrameRangeAnimation("sonic.walk.anim", 0, 5, 0, 0, 0, 100);
 	m_WalkAnim->SetForever();
+
+	m_RunAnim = new anim::FrameRangeAnimation("sonic.run.anim", 0, 3, 0, 0, 0, 60);
+	m_RunAnim->SetForever();
 
 	m_BallAnim = new anim::FrameRangeAnimation("sonic.ball.anim", 0, 4, 0, 0, 0, 100);
 	m_BallAnim->SetForever();
@@ -138,7 +155,9 @@ Sonic::~Sonic()
 	if (m_TunnelAnimator) m_TunnelAnimator->Stop();
 
 	if (m_IdleAnim) m_IdleAnim->Destroy();
+	if (m_IdleLoopAnim) m_IdleLoopAnim->Destroy();
 	if (m_WalkAnim) m_WalkAnim->Destroy();
+	if (m_RunAnim) m_RunAnim->Destroy();
 	if (m_BallAnim) m_BallAnim->Destroy();
 	if (m_Animator) m_Animator->Destroy();
 	if (m_TunnelAnimator) m_TunnelAnimator->Destroy();
@@ -192,8 +211,26 @@ void Sonic::OnHit()
 		sound::PlaySFX(s_HitSound);
 	}
 
-	// Lose a life
-	GameStats::Get().LoseLife();
+	// Check if Sonic has rings to lose
+	int currentRings = GameStats::Get().GetRings();
+	int ringsToLose = currentRings / 2;  // 50% rounded down
+
+	if (ringsToLose > 0)
+	{
+		// Lose rings and scatter them
+		GameStats::Get().LoseRings(ringsToLose);
+
+		// Notify callback to spawn scattered rings
+		if (m_RingScatterCallback)
+		{
+			m_RingScatterCallback(GetCenterX(), GetCenterY(), ringsToLose);
+		}
+	}
+	else if (currentRings == 0)
+	{
+		// No rings - lose a life
+		GameStats::Get().LoseLife();
+	}
 
 	// Start invincibility frames
 	m_InvincibilityFrames = INVINCIBILITY_DURATION;
@@ -225,18 +262,28 @@ void Sonic::HandleInput()
 {
 	int targetVX = 0;
 
+	// Determine if we should use run speed based on accumulated walk time
+	bool shouldRun = false;
+	if (m_WalkStartTime > 0)
+	{
+		TimeStamp currTime = core::SystemClock::Get().GetCurrTime();
+		TimeStamp walkDuration = currTime - m_WalkStartTime;
+		shouldRun = (walkDuration >= WALK_TO_RUN_MS);
+	}
+	int moveSpeed = shouldRun ? RUN_SPEED : WALK_SPEED;
+
 	// Horizontal movement
 	if (core::Input::IsKeyPressed(io::Key::Left) ||
 		core::Input::IsKeyPressed(io::Key::A))
 	{
-		targetVX = -WALK_SPEED;
+		targetVX = -moveSpeed;
 		m_Direction = Direction::LEFT;
 		SetFlipHorizontal(true);
 	}
 	else if (core::Input::IsKeyPressed(io::Key::Right) ||
 			 core::Input::IsKeyPressed(io::Key::D))
 	{
-		targetVX = WALK_SPEED;
+		targetVX = moveSpeed;
 		m_Direction = Direction::RIGHT;
 		SetFlipHorizontal(false);
 	}
@@ -334,6 +381,14 @@ void Sonic::UpdateAnimationState()
 	if (!m_OnGround)
 	{
 		// In the air (jumping or falling)
+		// Only reset walk tracking if direction changed (no longer holding same direction)
+		if (m_VelocityX == 0 || m_WalkDirection != m_Direction)
+		{
+			m_WalkStartTime = 0;
+		}
+		// Reset idle tracking when leaving ground
+		m_IdleStartTime = 0;
+		m_PlayingIdleLoop = false;
 		SetState(State::BALL);
 	}
 	else
@@ -341,10 +396,67 @@ void Sonic::UpdateAnimationState()
 		// On ground
 		if (m_VelocityX != 0)
 		{
-			SetState(State::WALKING);
+			TimeStamp currTime = core::SystemClock::Get().GetCurrTime();
+
+			// Reset idle tracking when moving
+			m_IdleStartTime = 0;
+			m_PlayingIdleLoop = false;
+
+			// Check if direction changed - reset walk timer
+			if (m_WalkDirection != m_Direction)
+			{
+				m_WalkStartTime = currTime;
+				m_WalkDirection = m_Direction;
+				SetState(State::WALKING);
+			}
+			// Check if we just started walking (first time or after stopping)
+			else if (m_WalkStartTime == 0)
+			{
+				m_WalkStartTime = currTime;
+				m_WalkDirection = m_Direction;
+				SetState(State::WALKING);
+			}
+			else
+			{
+				// Check if we've been walking long enough to run
+				TimeStamp walkDuration = currTime - m_WalkStartTime;
+				if (walkDuration >= WALK_TO_RUN_MS)
+				{
+					SetState(State::RUNNING);
+				}
+				else
+				{
+					SetState(State::WALKING);
+				}
+			}
 		}
 		else
 		{
+			// Stopped moving - reset walk tracking
+			m_WalkStartTime = 0;
+
+			TimeStamp currTime = core::SystemClock::Get().GetCurrTime();
+
+			// Track idle time
+			if (m_IdleStartTime == 0)
+			{
+				m_IdleStartTime = currTime;
+				m_PlayingIdleLoop = false;
+			}
+
+			// Check if we've been idle long enough to play loop animation
+			TimeStamp idleDuration = currTime - m_IdleStartTime;
+			if (idleDuration >= IDLE_TO_LOOP_MS && !m_PlayingIdleLoop)
+			{
+				m_PlayingIdleLoop = true;
+				// Switch to idle loop animation
+				m_Animator->Stop();
+				SetFilm(m_IdleLoopFilm);
+				m_FrameNo = 255;
+				SetFrame(0);
+				m_Animator->Start(m_IdleLoopAnim, currTime);
+			}
+
 			SetState(State::IDLE);
 		}
 	}
@@ -369,12 +481,25 @@ void Sonic::UpdateAnimation()
 	switch (m_State)
 	{
 		case State::IDLE:
-			newFilm = m_IdleFilm;
-			newAnim = m_IdleAnim;
+			// Use idle loop animation if we've been idle long enough
+			if (m_PlayingIdleLoop)
+			{
+				newFilm = m_IdleLoopFilm;
+				newAnim = m_IdleLoopAnim;
+			}
+			else
+			{
+				newFilm = m_IdleFilm;
+				newAnim = m_IdleAnim;
+			}
 			break;
 		case State::WALKING:
 			newFilm = m_WalkFilm;
 			newAnim = m_WalkAnim;
+			break;
+		case State::RUNNING:
+			newFilm = m_RunFilm;
+			newAnim = m_RunAnim;
 			break;
 		case State::BALL:
 		case State::TUNNEL:  // Tunnel uses ball animation
@@ -430,6 +555,12 @@ void Sonic::EnterTunnel(const anim::TunnelPath* path)
 {
 	if (!path || m_InTunnel)
 		return;
+
+	// Play tunnel sound
+	if (s_TunnelSound)
+	{
+		sound::PlaySFX(s_TunnelSound);
+	}
 
 	m_InTunnel = true;
 	m_CurrentTunnelPath = path;

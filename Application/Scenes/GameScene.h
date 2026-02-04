@@ -8,14 +8,18 @@
 #include "Scene/TileLayer.h"
 
 #include "Sprites/Ring.h"
+#include "Sprites/ScatteredRing.h"
+#include "Sprites/FinalRing.h"
 #include "Sprites/Checkpoint.h"
 #include "Sprites/BasicSprite.h"
 #include "Sprites/Flower.h"
 #include "Sprites/Masher.h"
+#include "Sprites/Bridge.h"
 #include "Physics/CollisionChecker.h"
 #include "Sound/Sound.h"
 #include "Game/HUD.h"
 #include "Animations/TunnelPath.h"
+#include "Animations/AnimationFilm.h"
 
 #include <vector>
 
@@ -26,15 +30,43 @@ public:
     void Load() override;
     void Clear() override;
 
+    // Called by FinalRing when collected
+    void StartEndingSequence();
+
 private:
+    // Pause menu options
+    enum class PauseMenuOption
+    {
+        CONTINUE = 0,
+        RESTART = 1,
+        EXIT = 2
+    };
+    static constexpr int PAUSE_MENU_OPTIONS = 3;
+
+    // Ending sequence states
+    enum class EndingState
+    {
+        NONE,           // Normal gameplay
+        WAITING,        // 1 second wait after collection
+        FADING,         // Screen darkening
+        SHOWING_END,    // Displaying end logo
+        DONE            // Transitioning to menu
+    };
+
     void OnRender();
     void OnInput();
+    void UpdateEndingSequence();
     void HandleKeyEvent(io::Key key);
     void HandleCloseEvent();
+    void RenderPauseMenu(gfx::Bitmap screen, int vpW, int vpH);
+    void HandlePauseMenuInput(io::Key key);
     void ClampCamera();
     void RegisterCollisions();
     void OnCollisionCheckLoop();
     void LoadFlowers();
+    void LoadRings();
+    void SpawnScatteredRings(int x, int y, int count);
+    void UpdateScatteredRings();
 
 private:
     // Event handles
@@ -62,14 +94,19 @@ private:
 
     // Sprites
     std::vector<Ring*> m_Rings;
+    std::vector<ScatteredRing*> m_ScatteredRings;
     std::vector<Flower*> m_Flowers;
     std::vector<Masher*> m_Mashers;
+    Bridge* m_Bridge = nullptr;
+    Bridge* m_Bridge2 = nullptr;
     Checkpoint* m_Checkpoint = nullptr;
+    FinalRing* m_FinalRing = nullptr;
     Sonic* m_Sonic = nullptr;
     gfx::Clipper m_Clipper;
 
     // Audio
     sound::Track m_BackgroundMusic = nullptr;
+    static sound::SFX s_RingDropSound;
 
     // HUD
     HUD m_HUD;
@@ -82,4 +119,19 @@ private:
     static constexpr int LEVEL_HEIGHT = 1536;
     static constexpr int SCROLL_SPEED = 4;
     static constexpr int GRID_Y_OFFSET = 0;  // Full-height 1x1 grid covers entire level
+
+    // Ending sequence
+    EndingState m_EndingState = EndingState::NONE;
+    TimeStamp m_EndingStartTime = 0;
+    float m_FadeAlpha = 0.0f;
+    anim::AnimationFilm* m_EndingSonicFilm = nullptr;
+    anim::AnimationFilm* m_EndingLogoFilm = nullptr;
+
+    // Ending timing constants (in milliseconds)
+    static constexpr int ENDING_WAIT_MS = 1000;       // 1 second wait before fade
+    static constexpr int ENDING_FADE_MS = 1500;       // 1.5 seconds to fade to dark
+    static constexpr int ENDING_DISPLAY_MS = 5000;    // 5 seconds showing end screen
+
+    // Pause menu state
+    PauseMenuOption m_PauseSelection = PauseMenuOption::CONTINUE;
 };

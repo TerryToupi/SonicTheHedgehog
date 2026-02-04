@@ -13,7 +13,7 @@ Ring::Ring(int x, int y)
     // Load the collection sound effect once (shared across all rings)
     if (!s_CollectSound)
     {
-        s_CollectSound = sound::LoadSFX(ASSETS "/Sounds/coin_collect.mp3");
+        s_CollectSound = sound::LoadSFX(ASSETS "/Sounds/coin-collect.mp3");
     }
 
     // Get both films from the holder (must be loaded first via FilmParser)
