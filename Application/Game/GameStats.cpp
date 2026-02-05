@@ -75,6 +75,11 @@ void GameStats::AddLife()
     }
 }
 
+void GameStats::ResetLives()
+{
+    m_Lives = DEFAULT_LIVES;
+}
+
 int GameStats::GetLives() const
 {
     return m_Lives;

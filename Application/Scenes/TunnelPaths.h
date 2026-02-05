@@ -6,6 +6,62 @@
 
 namespace TunnelPaths
 {
+	// Loop shape - relative offsets from entry point (left to right)
+	inline const std::vector<Point> LOOP_SHAPE = {
+		{0, 0},
+		{37, 11},
+		{82, 4},
+		{112, -7},
+		{142, -31},
+		{153, -60},
+		{153, -88},
+		{140, -112},
+		{120, -131},
+		{93, -138},
+		{67, -135},
+		{44, -122},
+		{29, -102},
+		{22, -81},
+		{24, -60},
+		{33, -39},
+		{46, -20},
+		{65, -4},
+		{84, 6},
+		{115, 10},
+		{178, 0},
+		{188, 0},
+		{198, 0}
+
+	};
+
+	// Loop shape inverse - mirrored for right to left
+	inline const std::vector<Point> LOOP_SHAPE_INVERSE = {
+		{0, 0},
+		{-37, 11},
+		{-82, 4},
+		{-112, -7},
+		{-142, -31},
+		{-153, -60},
+		{-153, -88},
+		{-140, -112},
+		{-120, -131},
+		{-93, -138},
+		{-67, -135},
+		{-44, -122},
+		{-29, -102},
+		{-22, -81},
+		{-24, -60},
+		{-33, -39},
+		{-46, -20},
+		{-65, -4},
+		{-84, 6},
+		{-115, 10},
+		{-178, 0},
+		{-188, 0},
+		{-198, 0}
+		
+	};
+
 	// Defining the S-curve shape ONCE as relative offsets from entry point.
 	// Each point is {dx, dy} relative to the tunnel entry position.
 	inline const std::vector<Point> S_CURVE_SHAPE = {
@@ -33,10 +89,15 @@ namespace TunnelPaths
 	{
 		std::vector<anim::TunnelPath> tunnels;
 
-		tunnels.push_back(anim::CreateTunnelAt("tunnel_1", {6170, 878}, S_CURVE_SHAPE));
-		tunnels.push_back(anim::CreateTunnelAt("tunnel_1", {6682, 1134}, S_CURVE_SHAPE));
-		tunnels.push_back(anim::CreateTunnelAt("tunnel_1", {6682, 622}, S_CURVE_SHAPE));
+		// S-curve tunnels (direction 1 = moving right)
+		tunnels.push_back(anim::CreateTunnelAt("tunnel_1", {6170, 878}, S_CURVE_SHAPE, 1));
+		tunnels.push_back(anim::CreateTunnelAt("tunnel_1", {6682, 1134}, S_CURVE_SHAPE, 1));
+		tunnels.push_back(anim::CreateTunnelAt("tunnel_1", {6682, 622}, S_CURVE_SHAPE, 1));
 
+		// Loop (positions are Sonic's center: box + {15, 20})
+		// Forward loop requires moving right (1), inverse requires moving left (-1)
+		tunnels.push_back(anim::CreateTunnelAt("loop_1", {5410, 930}, LOOP_SHAPE, 1));
+		tunnels.push_back(anim::CreateTunnelAt("loop_1_inv", {5585, 930}, LOOP_SHAPE_INVERSE, -1));
 
 		return tunnels;
 	}

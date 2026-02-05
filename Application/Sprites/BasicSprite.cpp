@@ -5,6 +5,9 @@
 #include "Utilities/MoverUtilities.h"
 #include "Game/GameStats.h"
 
+#include <cmath>
+#include <cstdio>  // For debug output
+
 // Static member initialization
 sound::SFX Sonic::s_JumpSound = nullptr;
 sound::SFX Sonic::s_HitSound = nullptr;
@@ -127,6 +130,11 @@ Sonic::Sonic(int x, int y, scene::GridMap* map, scene::TileLayer* layer)
 			m_X = pos.x - 12;  // Center sprite on path (sprite is ~24px wide)
 			m_Y = pos.y - 16;  // Center sprite on path (sprite is ~32px tall)
 
+			// Disable ramp detection for 1 second from now
+			m_LastFrameRise = 0;
+			m_FramesSinceRapidAscent = -1;
+			m_RampDisabledUntil = core::SystemClock::Get().GetCurrTime() + RAMP_DISABLE_MS;
+
 			// Update facing direction
 			if (dir.x < 0)
 			{
@@ -213,23 +221,28 @@ void Sonic::OnHit()
 
 	// Check if Sonic has rings to lose
 	int currentRings = GameStats::Get().GetRings();
-	int ringsToLose = currentRings / 2;  // 50% rounded down
 
-	if (ringsToLose > 0)
+	if (currentRings > 0)
 	{
-		// Lose rings and scatter them
-		GameStats::Get().LoseRings(ringsToLose);
+		// Lose all rings (classic Sonic behavior)
+		GameStats::Get().LoseRings(currentRings);
 
 		// Notify callback to spawn scattered rings
 		if (m_RingScatterCallback)
 		{
-			m_RingScatterCallback(GetCenterX(), GetCenterY(), ringsToLose);
+			m_RingScatterCallback(GetCenterX(), GetCenterY(), currentRings);
 		}
 	}
-	else if (currentRings == 0)
+	else
 	{
 		// No rings - lose a life
 		GameStats::Get().LoseLife();
+
+		// Notify death callback for respawn handling
+		if (m_DeathCallback)
+		{
+			m_DeathCallback();
+		}
 	}
 
 	// Start invincibility frames
@@ -314,6 +327,9 @@ void Sonic::HandleInput()
 
 void Sonic::ApplyMovement()
 {
+	// Store previous Y for ramp tracking
+	int prevY = m_Y;
+
 	// Apply gravity only when not on ground
 	// This prevents fighting between gravity and ground-following
 	if (!m_OnGround)
@@ -360,17 +376,73 @@ void Sonic::ApplyMovement()
 		m_OnGround = false;
 	}
 
+	// Check if ramp detection is still disabled (time-based cooldown after tunnel)
+	TimeStamp currentTime = core::SystemClock::Get().GetCurrTime();
+	bool rampDisabled = (currentTime < m_RampDisabledUntil);
+
+	// Track altitude change for ramp launch detection (skip during tunnel animations and cooldown)
+	if (m_OnGround && (m_State == State::RUNNING || m_State == State::WALKING) && m_VelocityX != 0 && !m_InTunnel && !rampDisabled)
+	{
+		// Calculate how much we rose this frame (positive = went UP, Y decreased)
+		int thisFrameRise = prevY - m_Y;
+
+		// Check if we're rapidly ascending - start tracking window
+		if (thisFrameRise >= RAMP_RAPID_ASCENT)
+		{
+			m_FramesSinceRapidAscent = 0;  // Start the check window
+		}
+		// Check if we're in the check window after rapid ascent
+		else if (m_FramesSinceRapidAscent >= 0 && m_FramesSinceRapidAscent < RAMP_CHECK_WINDOW)
+		{
+			// Check if rise dropped below threshold (ramp ended)
+			if (thisFrameRise < RAMP_STOP_THRESHOLD)
+			{
+				// Ramp launch! Keep horizontal momentum
+				m_VelocityY = RAMP_LAUNCH_VY;  // -18 (1.5x normal jump of -12)
+				m_OnGround = false;  // Force off ground for the launch
+
+				// Enter ball state for the launch
+				SetState(State::BALL);
+
+				// Reset tracking
+				m_FramesSinceRapidAscent = -1;
+			}
+			else
+			{
+				// Still ascending rapidly, advance the window counter
+				m_FramesSinceRapidAscent++;
+			}
+		}
+		// Window expired without triggering - reset
+		else if (m_FramesSinceRapidAscent >= RAMP_CHECK_WINDOW)
+		{
+			m_FramesSinceRapidAscent = -1;
+		}
+
+		m_LastFrameRise = thisFrameRise;
+	}
+	else
+	{
+		// Not on ground or not moving - reset tracking
+		m_LastFrameRise = 0;
+		m_FramesSinceRapidAscent = -1;
+	}
+
 	// Landing: just became grounded
 	if (m_OnGround && !wasOnGround)
 	{
 		m_VelocityY = 0;
+		m_LastFrameRise = 0;
+		m_FramesSinceRapidAscent = -1;
 	}
 
-	// Walking off edge: just left ground without jumping
+	// Walking off edge: just left ground without jumping (fallback for actual edges)
 	if (!m_OnGround && wasOnGround && m_VelocityY >= 0)
 	{
-		// Start falling - gravity will be applied next frame
+		// Normal edge walk-off - start falling
 		m_VelocityY = 1;
+		m_LastFrameRise = 0;
+		m_FramesSinceRapidAscent = -1;
 	}
 }
 
@@ -540,13 +612,20 @@ void Sonic::CheckTunnelTriggers()
 	int centerX = GetCenterX();
 	int centerY = GetCenterY();
 
+	// Determine movement direction: -1 left, 0 stationary, 1 right
+	int moveDir = (m_VelocityX < 0) ? -1 : (m_VelocityX > 0) ? 1 : 0;
+
 	// Check each tunnel's trigger box
 	for (const auto& tunnel : *m_TunnelPaths)
 	{
 		if (tunnel.IsInTrigger(centerX, centerY))
 		{
-			EnterTunnel(&tunnel);
-			return;
+			// Check direction requirement (0 = any direction allowed)
+			if (tunnel.requiredDirection == 0 || tunnel.requiredDirection == moveDir)
+			{
+				EnterTunnel(&tunnel);
+				return;
+			}
 		}
 	}
 }
@@ -569,6 +648,11 @@ void Sonic::EnterTunnel(const anim::TunnelPath* path)
 	m_VelocityX = 0;
 	m_VelocityY = 0;
 	m_OnGround = false;
+
+	// Disable ramp detection for 1 second from now
+	m_LastFrameRise = 0;
+	m_FramesSinceRapidAscent = -1;
+	m_RampDisabledUntil = core::SystemClock::Get().GetCurrTime() + RAMP_DISABLE_MS;
 
 	// Switch to ball state and animation
 	SetState(State::TUNNEL);
@@ -603,6 +687,51 @@ void Sonic::ExitTunnel()
 		m_OnGround = false;
 	}
 
+	// Disable ramp detection for 1 second from now
+	m_LastFrameRise = 0;
+	m_FramesSinceRapidAscent = -1;
+	m_RampDisabledUntil = core::SystemClock::Get().GetCurrTime() + RAMP_DISABLE_MS;
+
 	// Return to ball state (will transition to appropriate state next frame)
 	SetState(State::BALL);
+}
+
+void Sonic::Respawn(int x, int y)
+{
+	// Set position
+	m_X = x;
+	m_Y = y;
+
+	// Reset velocity and state
+	m_VelocityX = 0;
+	m_VelocityY = 0;
+	m_OnGround = false;
+	m_JumpHeld = false;
+	m_GravityFrame = 0;
+
+	// Reset walk/idle tracking
+	m_WalkStartTime = 0;
+	m_IdleStartTime = 0;
+	m_PlayingIdleLoop = false;
+
+	// Reset ramp tracking
+	m_LastFrameRise = 0;
+	m_FramesSinceRapidAscent = -1;
+
+	// Exit tunnel if in one
+	if (m_InTunnel)
+	{
+		m_InTunnel = false;
+		m_CurrentTunnelPath = nullptr;
+		m_TunnelAnimator->Stop();
+	}
+
+	// Start in ball state (falling from spawn)
+	SetState(State::BALL);
+
+	// Give brief invincibility after respawn
+	m_InvincibilityFrames = INVINCIBILITY_DURATION;
+
+	// Update bounding area
+	UpdateBoundingArea();
 }

@@ -41,6 +41,13 @@ public:
 	using RingScatterCallback = std::function<void(int x, int y, int count)>;
 	void SetRingScatterCallback(RingScatterCallback callback) { m_RingScatterCallback = std::move(callback); }
 
+	// Death callback (called when Sonic loses a life)
+	using DeathCallback = std::function<void()>;
+	void SetDeathCallback(DeathCallback callback) { m_DeathCallback = std::move(callback); }
+
+	// Respawn at a given position
+	void Respawn(int x, int y);
+
 	// Allow passing through vertical terrain when in ball form and moving upward
 	bool CanPassThroughCeiling() const override { return m_State == State::BALL && m_VelocityY < 0; }
 
@@ -97,6 +104,16 @@ private:
 	bool m_JumpHeld = false;
 	int m_GravityFrame = 0;  // Counter to apply gravity every N frames
 
+	// Ramp launch - detect rapid ascent followed by stop
+	int m_LastFrameRise = 0;        // How much we rose last frame (positive = went up)
+	int m_FramesSinceRapidAscent = -1;  // Frames since rapid ascent (-1 = not tracking)
+	TimeStamp m_RampDisabledUntil = 0;  // Timestamp until which ramp detection is disabled
+	static constexpr int RAMP_RAPID_ASCENT = 10;    // Minimum rise per frame to count as rapid ascent
+	static constexpr int RAMP_STOP_THRESHOLD = 2;   // Must rise less than this to count as "stopped"
+	static constexpr int RAMP_CHECK_WINDOW = 2;     // Check this many frames after rapid ascent
+	static constexpr int RAMP_LAUNCH_VY = -16;      // 1.30x normal jump power
+	static constexpr int RAMP_DISABLE_MS = 1000;    // Disable ramp detection for 1 second after tunnel
+
 	// References
 	scene::GridMap* m_Grid = nullptr;
 	scene::TileLayer* m_TileLayer = nullptr;
@@ -119,6 +136,9 @@ private:
 
 	// Ring scatter callback
 	RingScatterCallback m_RingScatterCallback;
+
+	// Death callback
+	DeathCallback m_DeathCallback;
 
 	// Tunnel path system
 	const std::vector<anim::TunnelPath>* m_TunnelPaths = nullptr;

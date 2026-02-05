@@ -6,6 +6,7 @@
 #include <string>
 #include <fstream>
 #include <cstdint>
+#include <cmath>
 
 namespace scene
 {
@@ -142,6 +143,62 @@ namespace scene
 		}
 
 		return 0; // No ground found within threshold
+	}
+
+	float GridMap::GetSlopeAngle(Rect& r, int sampleDistance)
+	{
+		// Sample ground height at left and right of sprite to calculate slope
+		// Returns angle in degrees (positive = uphill going right)
+		auto spriteBottom = r.y + r.h;
+		auto centerX = r.x + r.w / 2;
+
+		// Sample points to the left and right of center
+		auto leftX = centerX - sampleDistance;
+		auto rightX = centerX + sampleDistance;
+
+		// Find ground height at left sample point
+		int leftGroundY = -1;
+		auto leftCol = DivGridElementWidth(leftX);
+		auto bottomRow = DivGridElementHeight(spriteBottom);
+
+		// Search down from sprite bottom to find ground
+		auto gridMaxRows = m_config.totalRows * (m_config.tileHeight / m_config.gridElementHeight);
+		for (Dim row = bottomRow; row < gridMaxRows && row <= bottomRow + 16; ++row)
+		{
+			if (GetGridTile(leftCol, row) & GRID_TOP_SOLID_MASK)
+			{
+				leftGroundY = MulGridElementHeight(row);
+				break;
+			}
+		}
+
+		// Find ground height at right sample point
+		int rightGroundY = -1;
+		auto rightCol = DivGridElementWidth(rightX);
+		for (Dim row = bottomRow; row < gridMaxRows && row <= bottomRow + 16; ++row)
+		{
+			if (GetGridTile(rightCol, row) & GRID_TOP_SOLID_MASK)
+			{
+				rightGroundY = MulGridElementHeight(row);
+				break;
+			}
+		}
+
+		// If we couldn't find ground at both points, return 0
+		if (leftGroundY < 0 || rightGroundY < 0)
+			return 0.0f;
+
+		// Calculate slope: rise over run
+		// Negative heightDiff means ground goes UP to the right (uphill)
+		int heightDiff = rightGroundY - leftGroundY;
+		int horizontalDist = sampleDistance * 2;
+
+		// Convert to angle using atan2 (returns radians, convert to degrees)
+		// Note: in screen coords, Y increases downward, so negate for proper angle
+		float angleRad = std::atan2(static_cast<float>(-heightDiff), static_cast<float>(horizontalDist));
+		float angleDeg = angleRad * 180.0f / 3.14159265f;
+
+		return angleDeg;
 	}
 
 	int GridMap::GetWallPushOutDistance(Rect& r)

@@ -204,6 +204,44 @@
       "frames": [
         { "x": 958, "y": 446, "w": 256, "h": 44 }
       ]
+    },
+    {
+      "id": "sonic.face.overlay",
+      "path": "Textures/misc_fixed.png",
+      "frames": [
+        { "x": 80, "y": 391, "w": 16, "h": 16 }
+      ]
+    },
+    {
+      "id": "crab.idle",
+      "path": "Textures/enemies_sheet_fixed.png",
+      "frames": [
+        { "x": 8, "y": 29, "w": 48, "h": 32 }
+      ]
+    },
+    {
+      "id": "crab.walk",
+      "path": "Textures/enemies_sheet_fixed.png",
+      "frames": [
+        { "x": 8, "y": 29, "w": 48, "h": 32 },
+        { "x": 64, "y": 29, "w": 48, "h": 32 },
+        { "x": 120, "y": 29, "w": 48, "h": 32 }
+      ]
+    },
+    {
+      "id": "crab.attack",
+      "path": "Textures/enemies_sheet_fixed.png",
+      "frames": [
+        { "x": 232, "y": 29, "w": 48, "h": 32 }
+      ]
+    },
+    {
+      "id": "crab.bullet",
+      "path": "Textures/enemies_sheet_fixed.png",
+      "frames": [
+        { "x": 288, "y": 25, "w": 16, "h": 16 },
+        { "x": 288, "y": 49, "w": 16, "h": 16 }
+      ]
     }
   ]
 }

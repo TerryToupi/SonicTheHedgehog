@@ -133,8 +133,9 @@ void GameScene::Load()
         flower->StartAnimation();
     }
 
-    // Create test checkpoint (positioned near the rings)
-    m_Checkpoint = new Checkpoint(410, 1170);
+    // Create checkpoints
+    m_Checkpoints.push_back(new Checkpoint(410, 1170));
+    m_Checkpoints.push_back(new Checkpoint(6511, 1110));
 
     // Create Sonic (positioned in visible area)
     m_Sonic = new Sonic(50, 1100, &m_Grid, &m_TileLayer);
@@ -150,6 +151,11 @@ void GameScene::Load()
     }
     m_Sonic->SetRingScatterCallback([this](int x, int y, int count) {
         SpawnScatteredRings(x, y, count);
+    });
+
+    // Set up death callback for respawning
+    m_Sonic->SetDeathCallback([this]() {
+        OnSonicDeath();
     });
 
     // Create enemies - Masher at the first gap
@@ -170,6 +176,19 @@ void GameScene::Load()
     for (auto* masher : m_Mashers)
     {
         masher->StartAnimation();
+    }
+
+    // Create Crabmeat enemy at the start of the level
+    m_Crabmeats.push_back(new Crabmeat(2208, 1094, &m_Grid));
+    m_Crabmeats.push_back(new Crabmeat(3230, 930, &m_Grid));
+    m_Crabmeats.push_back(new Crabmeat(6366, 610, &m_Grid));
+    m_Crabmeats.push_back(new Crabmeat(8064, 1437, &m_Grid));
+    m_Crabmeats.push_back(new Crabmeat(8790, 1087, &m_Grid));
+
+    // Start all crabmeat animations
+    for (auto* crabmeat : m_Crabmeats)
+    {
+        crabmeat->StartAnimation();
     }
 
     // Create bridge (decorative element)
@@ -253,9 +272,18 @@ void GameScene::Clear()
     {
         checker.Cancel(m_Sonic, masher);
     }
-    if (m_Checkpoint)
+    for (auto* crabmeat : m_Crabmeats)
     {
-        checker.Cancel(m_Sonic, m_Checkpoint);
+        checker.Cancel(m_Sonic, crabmeat);
+        // Cancel bullet collisions
+        for (auto* bullet : crabmeat->GetBullets())
+        {
+            checker.Cancel(m_Sonic, bullet);
+        }
+    }
+    for (auto* checkpoint : m_Checkpoints)
+    {
+        checker.Cancel(m_Sonic, checkpoint);
     }
     if (m_FinalRing)
     {
@@ -287,6 +315,12 @@ void GameScene::Clear()
     }
     m_Mashers.clear();
 
+    for (auto* crabmeat : m_Crabmeats)
+    {
+        crabmeat->Destroy();
+    }
+    m_Crabmeats.clear();
+
     if (m_Bridge)
     {
         m_Bridge->Destroy();
@@ -299,11 +333,11 @@ void GameScene::Clear()
         m_Bridge2 = nullptr;
     }
 
-    if (m_Checkpoint)
+    for (auto* checkpoint : m_Checkpoints)
     {
-        m_Checkpoint->Destroy();
-        m_Checkpoint = nullptr;
+        checkpoint->Destroy();
     }
+    m_Checkpoints.clear();
 
     if (m_FinalRing)
     {
@@ -427,10 +461,13 @@ void GameScene::OnRender()
         }
     }
 
-    // Render checkpoint
-    if (m_Checkpoint && m_Checkpoint->IsVisible())
+    // Render checkpoints
+    for (auto* checkpoint : m_Checkpoints)
     {
-        m_Checkpoint->Display(screen, viewArea, m_Clipper);
+        if (checkpoint->IsVisible())
+        {
+            checkpoint->Display(screen, viewArea, m_Clipper);
+        }
     }
 
     // Render final ring (goal)
@@ -445,6 +482,23 @@ void GameScene::OnRender()
         if (masher->IsVisible() && masher->IsAlive())
         {
             masher->Display(screen, viewArea, m_Clipper);
+        }
+    }
+
+    // Render enemies (Crabmeats and their bullets)
+    for (auto* crabmeat : m_Crabmeats)
+    {
+        if (crabmeat->IsVisible() && crabmeat->IsAlive())
+        {
+            crabmeat->Display(screen, viewArea, m_Clipper);
+        }
+        // Render bullets even if crabmeat is dead (they should continue flying)
+        for (auto* bullet : crabmeat->GetBullets())
+        {
+            if (bullet->IsVisible() && bullet->IsActive())
+            {
+                bullet->Display(screen, viewArea, m_Clipper);
+            }
         }
     }
 
@@ -514,7 +568,7 @@ void GameScene::OnRender()
     // Render HUD overlay (always on top, fixed screen position)
     if (m_EndingState == EndingState::NONE || m_EndingState == EndingState::WAITING)
     {
-        m_HUD.Render(screen);
+        m_HUD.Render(screen, vpH);
     }
 
     // Render ending sequence overlay
@@ -584,6 +638,42 @@ void GameScene::OnRender()
         }
     }
 
+    // Render death sequence fade overlay
+    if (m_DeathState != DeathState::NONE && m_DeathFadeAlpha > 0.0f)
+    {
+        // Draw fade overlay using direct pixel manipulation
+        if (gfx::BitmapLock(screen))
+        {
+            uint8_t* base = gfx::BitmapGetMemory(screen);
+            int pitch = gfx::BitmapGetLineOffset(screen);
+            uint8_t fadeAmount = static_cast<uint8_t>(m_DeathFadeAlpha * 255.0f);
+
+            // Get color component extraction info
+            unsigned redShift = gfx::GetRedShiftRGBA();
+            unsigned greenShift = gfx::GetGreenShiftRGBA();
+            unsigned blueShift = gfx::GetBlueShiftRGBA();
+
+            for (int y = 0; y < vpH; ++y)
+            {
+                gfx::Color* row = reinterpret_cast<gfx::Color*>(base + y * pitch);
+                for (int x = 0; x < vpW; ++x)
+                {
+                    // Extract color components
+                    uint8_t r = static_cast<uint8_t>((row[x] >> redShift) & 0xFF);
+                    uint8_t g = static_cast<uint8_t>((row[x] >> greenShift) & 0xFF);
+                    uint8_t b = static_cast<uint8_t>((row[x] >> blueShift) & 0xFF);
+
+                    // Blend towards black
+                    r = static_cast<uint8_t>((r * (255 - fadeAmount)) / 255);
+                    g = static_cast<uint8_t>((g * (255 - fadeAmount)) / 255);
+                    b = static_cast<uint8_t>((b * (255 - fadeAmount)) / 255);
+                    row[x] = gfx::MakeColor(r, g, b, 255);
+                }
+            }
+            gfx::BitmapUnlock(screen);
+        }
+    }
+
     // Render pause menu overlay if game is paused
     if (m_Game.IsPaused())
     {
@@ -619,12 +709,28 @@ void GameScene::OnInput()
         // During WAITING and FADING, Sonic can still move (fall through to normal updates)
     }
 
+    // Handle death/respawn sequence
+    if (m_DeathState != DeathState::NONE)
+    {
+        UpdateDeathSequence();
+        // Skip all gameplay updates during death sequence
+        return;
+    }
+
     // Update enemies
     for (auto* masher : m_Mashers)
     {
         if (masher->IsAlive())
         {
             masher->Update();
+        }
+    }
+
+    for (auto* crabmeat : m_Crabmeats)
+    {
+        if (crabmeat->IsAlive())
+        {
+            crabmeat->Update();
         }
     }
 
@@ -781,15 +887,18 @@ void GameScene::RegisterCollisions()
         );
     }
 
-    // Register Sonic vs Checkpoint
-    if (m_Checkpoint)
+    // Register Sonic vs Checkpoints
+    for (auto* checkpoint : m_Checkpoints)
     {
-        checker.Register(m_Sonic, m_Checkpoint,
-            [](scene::Sprite* sonic, scene::Sprite* checkpointSprite) {
-                Checkpoint* checkpoint = static_cast<Checkpoint*>(checkpointSprite);
-                if (!checkpoint->IsTriggered())
+        checker.Register(m_Sonic, checkpoint,
+            [this](scene::Sprite* sonic, scene::Sprite* checkpointSprite) {
+                Checkpoint* cp = static_cast<Checkpoint*>(checkpointSprite);
+                if (!cp->IsTriggered())
                 {
-                    checkpoint->OnTriggered();
+                    cp->OnTriggered();
+                    // Save checkpoint position as respawn point (spawn above the checkpoint)
+                    Rect box = cp->GetBox();
+                    m_RespawnPosition = {box.x, box.y - 40};
                 }
             }
         );
@@ -842,11 +951,74 @@ void GameScene::RegisterCollisions()
             }
         );
     }
+
+    // Register Sonic vs Crabmeats (enemies)
+    for (auto* crabmeat : m_Crabmeats)
+    {
+        checker.Register(m_Sonic, crabmeat,
+            [](scene::Sprite* sonicSprite, scene::Sprite* crabmeatSprite) {
+                Sonic* sonic = static_cast<Sonic*>(sonicSprite);
+                Crabmeat* crabmeat = static_cast<Crabmeat*>(crabmeatSprite);
+                if (!crabmeat->IsAlive())
+                    return;
+
+                // When invincible, Sonic can't interact with enemies at all
+                if (sonic->IsInvincible())
+                    return;
+
+                // If Sonic is in ball state (spinning/jumping), he kills the enemy
+                if (sonic->IsInBallState())
+                {
+                    crabmeat->Kill();
+                    sonic->BounceOffEnemy();
+                }
+                // Otherwise, Sonic takes damage
+                else
+                {
+                    sonic->OnHit();
+                }
+            }
+        );
+    }
 }
 
 void GameScene::OnCollisionCheckLoop()
 {
     physics::CollisionChecker::Get().Check();
+
+    // Check Crabmeat bullet collisions manually (since bullets are created dynamically)
+    if (m_Sonic && !m_Sonic->IsInvincible())
+    {
+        for (auto* crabmeat : m_Crabmeats)
+        {
+            for (auto* bullet : crabmeat->GetBullets())
+            {
+                if (!bullet->IsActive())
+                    continue;
+
+                // Simple bounding box collision check
+                const auto* sonicBox = static_cast<const physics::BoundingBox*>(m_Sonic->GetBoundingArea());
+                const auto* bulletBox = static_cast<const physics::BoundingBox*>(bullet->GetBoundingArea());
+
+                if (sonicBox && bulletBox)
+                {
+                    // Check overlap
+                    bool overlaps = !(sonicBox->x2 < bulletBox->x1 ||
+                                     sonicBox->x1 > bulletBox->x2 ||
+                                     sonicBox->y2 < bulletBox->y1 ||
+                                     sonicBox->y1 > bulletBox->y2);
+
+                    if (overlaps)
+                    {
+                        // Bullet hits Sonic - Sonic takes damage, bullet deactivates
+                        bullet->Deactivate();
+                        bullet->SetVisibility(false);
+                        m_Sonic->OnHit();
+                    }
+                }
+            }
+        }
+    }
 }
 
 void GameScene::LoadFlowers()
@@ -1099,4 +1271,97 @@ void GameScene::UpdateScatteredRings()
             ++it;
         }
     }
+}
+
+void GameScene::OnSonicDeath()
+{
+    // Only trigger respawn sequence on game over (0 lives)
+    // Otherwise, Sonic just gets knockback + invincibility (handled in OnHit)
+    if (!GameStats::Get().IsGameOver())
+    {
+        // Still have lives - no respawn needed, just continue with knockback
+        return;
+    }
+
+    // Game over - start death fade sequence for respawn at checkpoint
+    if (m_DeathState == DeathState::NONE)
+    {
+        m_DeathState = DeathState::FADING_OUT;
+        m_DeathStartTime = core::SystemClock::Get().GetCurrTime();
+        m_DeathFadeAlpha = 0.0f;
+
+        // Hide Sonic during fade
+        if (m_Sonic)
+        {
+            m_Sonic->SetVisibility(false);
+        }
+    }
+}
+
+void GameScene::UpdateDeathSequence()
+{
+    if (m_DeathState == DeathState::NONE)
+        return;
+
+    TimeStamp currentTime = core::SystemClock::Get().GetCurrTime();
+    TimeStamp elapsed = currentTime - m_DeathStartTime;
+
+    switch (m_DeathState)
+    {
+        case DeathState::FADING_OUT:
+            // Fade to black
+            m_DeathFadeAlpha = static_cast<float>(elapsed) / static_cast<float>(DEATH_FADE_OUT_MS);
+            if (m_DeathFadeAlpha >= 1.0f)
+            {
+                m_DeathFadeAlpha = 1.0f;
+                // Respawn Sonic while screen is black
+                RespawnSonic();
+                // Start fade in
+                m_DeathState = DeathState::FADING_IN;
+                m_DeathStartTime = currentTime;
+            }
+            break;
+
+        case DeathState::FADING_IN:
+            // Fade back in (alpha goes from 1 to 0)
+            m_DeathFadeAlpha = 1.0f - (static_cast<float>(elapsed) / static_cast<float>(DEATH_FADE_IN_MS));
+            if (m_DeathFadeAlpha <= 0.0f)
+            {
+                m_DeathFadeAlpha = 0.0f;
+                m_DeathState = DeathState::NONE;
+                // Make Sonic visible again
+                if (m_Sonic)
+                {
+                    m_Sonic->SetVisibility(true);
+                }
+            }
+            break;
+
+        case DeathState::NONE:
+            break;
+    }
+}
+
+void GameScene::RespawnSonic()
+{
+    if (!m_Sonic)
+        return;
+
+    // Restore lives after game over respawn
+    GameStats::Get().ResetLives();
+
+    // Respawn at the saved checkpoint position
+    m_Sonic->Respawn(m_RespawnPosition.x, m_RespawnPosition.y);
+
+    // Reset camera to follow Sonic at respawn position
+    int vpW = SceneManager::Get().GetViewportWidth();
+    int vpH = SceneManager::Get().GetViewportHeight();
+
+    m_CameraX = m_Sonic->GetCenterX() - vpW / 3;
+    m_CameraSmoothY = static_cast<float>(m_Sonic->GetBottomY() - vpH * 3 / 4);
+    m_CameraTargetY = m_CameraSmoothY;
+    m_CameraY = static_cast<int>(m_CameraSmoothY);
+
+    // Clamp camera to level bounds
+    ClampCamera();
 }

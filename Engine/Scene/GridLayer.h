@@ -50,6 +50,10 @@ namespace scene
 		int GetGroundSnapDownDistance(Rect& r);
 		int GetWallPushOutDistance(Rect& r);  // Returns + for push right, - for push left, 0 if not in wall
 
+		// Get the slope angle at a position (returns angle in degrees, positive = uphill going right)
+		// Returns 0 if on flat ground, positive for upward slopes, negative for downward slopes
+		float GetSlopeAngle(Rect& r, int sampleDistance = 8);
+
 		GridIndex* Data(void);
 		void SetGridTile(Dim col, Dim row, GridIndex index);
 		GridIndex GetGridTile(Dim col, Dim row);

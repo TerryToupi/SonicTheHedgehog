@@ -14,6 +14,7 @@ namespace anim
 		Rect triggerBox;               // Entry detection zone
 		float baseSpeed = 8.0f;        // Starting speed (pixels per frame)
 		float maxSpeed = 16.0f;        // Maximum speed at end of path
+		int requiredDirection = 0;     // -1 = moving left, 0 = any, 1 = moving right
 
 		// Calculate total path length
 		float GetTotalLength() const
@@ -37,10 +38,12 @@ namespace anim
 	};
 
 	// Helper to create a tunnel path from relative offsets
+	// requiredDirection: -1 = must be moving left, 0 = any direction, 1 = must be moving right
 	inline TunnelPath CreateTunnelAt(
 		const std::string& id,
 		Point startPos,
 		const std::vector<Point>& relativeShape,
+		int requiredDirection = 0,
 		float baseSpeed = 8.0f,
 		float maxSpeed = 16.0f,
 		int triggerSize = 24)
@@ -49,6 +52,7 @@ namespace anim
 		path.id = id;
 		path.baseSpeed = baseSpeed;
 		path.maxSpeed = maxSpeed;
+		path.requiredDirection = requiredDirection;
 
 		// Trigger box centered on start position
 		path.triggerBox = {

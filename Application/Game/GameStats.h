@@ -25,6 +25,7 @@ public:
     // Lives
     void LoseLife();
     void AddLife();
+    void ResetLives();  // Reset to default lives (for respawn after game over)
     int GetLives() const;
     bool IsGameOver() const;
 

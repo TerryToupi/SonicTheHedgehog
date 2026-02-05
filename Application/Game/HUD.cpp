@@ -2,14 +2,16 @@
 #include "Game/GameStats.h"
 #include "Utilities/DrawHelpers.h"
 #include "Rendering/Color.h"
+#include "Animations/AnimationFilmHolder.h"
 
 #include <cstdio>
 
-void HUD::Render(gfx::Bitmap screen)
+void HUD::Render(gfx::Bitmap screen, int viewportHeight)
 {
     RenderScore(screen);
     RenderTime(screen);
     RenderRings(screen);
+    RenderLives(screen, viewportHeight);
 }
 
 void HUD::RenderScore(gfx::Bitmap screen)
@@ -54,4 +56,30 @@ void HUD::RenderRings(gfx::Bitmap screen)
     char ringsStr[16];
     snprintf(ringsStr, sizeof(ringsStr), "%d", GameStats::Get().GetRings());
     draw::Text(screen, VALUE_X, y, ringsStr, yellow, FONT_SCALE);
+}
+
+void HUD::RenderLives(gfx::Bitmap screen, int viewportHeight)
+{
+    // Get the sonic face film
+    const anim::AnimationFilm* faceFilm =
+        anim::AnimationFilmHolder::Get().GetFilm("sonic.face.overlay");
+
+    if (!faceFilm)
+        return;
+
+    // Position at bottom-left
+    int x = LIVES_MARGIN;
+    int y = viewportHeight - LIVES_ICON_SIZE - LIVES_MARGIN;
+
+    // Draw the face icon
+    faceFilm->DisplayFrame(screen, {x, y}, 0);
+
+    // Draw "x" and lives count next to the icon
+    gfx::Color yellow = gfx::MakeColor(255, 255, 0, 255);
+    int textX = x + LIVES_ICON_SIZE + 2;
+    int textY = y + 4;  // Center text vertically with icon
+
+    char livesStr[16];
+    snprintf(livesStr, sizeof(livesStr), "X%d", GameStats::Get().GetLives());
+    draw::Text(screen, textX, textY, livesStr, yellow, FONT_SCALE);
 }

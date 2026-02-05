@@ -14,6 +14,8 @@
 #include "Sprites/BasicSprite.h"
 #include "Sprites/Flower.h"
 #include "Sprites/Masher.h"
+#include "Sprites/Crabmeat.h"
+#include "Sprites/CrabBullet.h"
 #include "Sprites/Bridge.h"
 #include "Physics/CollisionChecker.h"
 #include "Sound/Sound.h"
@@ -51,6 +53,14 @@ private:
         FADING,         // Screen darkening
         SHOWING_END,    // Displaying end logo
         DONE            // Transitioning to menu
+    };
+
+    // Death/respawn sequence states
+    enum class DeathState
+    {
+        NONE,           // Normal gameplay
+        FADING_OUT,     // Screen darkening after death
+        FADING_IN       // Screen brightening at checkpoint
     };
 
     void OnRender();
@@ -97,9 +107,10 @@ private:
     std::vector<ScatteredRing*> m_ScatteredRings;
     std::vector<Flower*> m_Flowers;
     std::vector<Masher*> m_Mashers;
+    std::vector<Crabmeat*> m_Crabmeats;
     Bridge* m_Bridge = nullptr;
     Bridge* m_Bridge2 = nullptr;
-    Checkpoint* m_Checkpoint = nullptr;
+    std::vector<Checkpoint*> m_Checkpoints;
     FinalRing* m_FinalRing = nullptr;
     Sonic* m_Sonic = nullptr;
     gfx::Clipper m_Clipper;
@@ -119,6 +130,21 @@ private:
     static constexpr int LEVEL_HEIGHT = 1536;
     static constexpr int SCROLL_SPEED = 4;
     static constexpr int GRID_Y_OFFSET = 0;  // Full-height 1x1 grid covers entire level
+
+    // Respawn system
+    Point m_RespawnPosition = {50, 1100};  // Default spawn position
+    void OnSonicDeath();
+    void RespawnSonic();
+    void UpdateDeathSequence();
+
+    // Death sequence state
+    DeathState m_DeathState = DeathState::NONE;
+    TimeStamp m_DeathStartTime = 0;
+    float m_DeathFadeAlpha = 0.0f;
+
+    // Death timing constants (in milliseconds)
+    static constexpr int DEATH_FADE_OUT_MS = 800;   // Fade to black
+    static constexpr int DEATH_FADE_IN_MS = 800;    // Fade back in
 
     // Ending sequence
     EndingState m_EndingState = EndingState::NONE;
