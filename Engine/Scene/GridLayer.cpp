@@ -784,6 +784,7 @@ namespace scene
 		// );
 
 		// return n <= solidThreshold;
+		return true;
 	}
 
 	void GridMap::ComputeGridBlock(GridIndex* block, Bitmap& tileElem, Bitmap& gridElem, Bitmap& tileSet, byte solidThreshold)
