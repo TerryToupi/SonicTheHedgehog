@@ -23,14 +23,12 @@ target_include_directories(${PROJECT_NAME}
 
 find_package(SDL REQUIRED)
 find_package(SDL_mixer REQUIRED)
-find_package(box2d REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         SDL3::SDL3
         SDL3_mixer::SDL3_mixer
-        box2d::box2d
         nlohmann_json::nlohmann_json
 )
 

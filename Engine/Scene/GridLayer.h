@@ -67,7 +67,7 @@ namespace scene
 		GridIndex* GetGridTileBlock(Dim colTile, Dim rowTile, Dim tileCols);
 		void SetGridTileBlock(Dim colTile, Dim rowTile, Dim tileCols, GridIndex flags);
 
-		void ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty);
+		// void ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty);
 
 		bool LoadFromCSV(const std::string& csvContent);
 

@@ -583,8 +583,8 @@ namespace scene
 		}
 	}
 
-	void GridMap::ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty)
-	{ 
+//	void GridMap::ComputeTileGridBlock(TileLayer* tlayer, Dim row, Dim col, Dim tileCols, byte solidThreshold, bool assumtedEmpty)
+//	{ 
 		// Bitmap tileElement = BitmapCreate(m_config.tileWidth, m_config.tileHeight);
 		// Bitmap gridElement = BitmapCreate(m_config.gridElementWidth, m_config.gridElementHeight);
 
@@ -605,7 +605,7 @@ namespace scene
 
 		// BitmapDestroy(tileElement);
 		// BitmapDestroy(gridElement);
-	}
+//	}
 
 	bool GridMap::LoadFromCSV(const std::string& csvContent)
 	{

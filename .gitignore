@@ -10,6 +10,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+.DS_Store
 
 # CLion
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
@@ -24,6 +25,7 @@ xcode/
 ninja/
 out/
 build/
+proj/
 
 # Imports
 Import/box2d/

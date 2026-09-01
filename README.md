@@ -66,15 +66,7 @@ LICENSES/          Project and third-party license files
 ## Requirements
 
 - CMake 3.20 or newer.
-- A C++20 compiler.
-- Git, because dependencies are fetched by CPM from their upstream repositories.
-
-The project uses CPM to fetch:
-
-- SDL3
-- SDL3_mixer
-- Box2D
-- nlohmann/json
+- A C++20 compiler (MSVC on windows or Clang on Mac/Unix).
 
 ## Build and Run
 
@@ -85,12 +77,22 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-Then run the `Application` executable from the generated build output.
+For Visual Studio project generation:
 
-On Windows with Visual Studio generators, the executable is typically under:
+```sh
+cmake -S . -B proj/ -G "Visual Studio 18 2026"
+```
 
-```text
-build/Application/Release/Application.exe
+For Xcode project generation:
+
+```sh
+cmake -S . -B proj/ -G "Xcode"
+```
+
+The binary will be located under
+
+```sh
+<proj or build>/bin/<Debug or Release>/Application
 ```
 
 ### Note for case-sensitive filesystems
